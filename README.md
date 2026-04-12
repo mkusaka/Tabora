@@ -10,6 +10,20 @@ It is intentionally scoped to a practical first slice:
 - A centered overlay that shows thumbnails, window titles, app names, and app icons
 - Keyboard-driven navigation with graceful fallback when permissions or thumbnails are unavailable
 
+## Install
+
+### Homebrew
+
+```bash
+brew install --cask mkusaka/tap/tabora
+```
+
+### Manual Download
+
+Download the latest `.zip` from [GitHub Releases](https://github.com/mkusaka/Tabora/releases), extract it, and move `Tabora.app` to `/Applications`.
+
+GitHub Releases and the Homebrew cask are intended to be signed with a Developer ID certificate and notarized by Apple so Gatekeeper can allow normal launch after download.
+
 ## Status
 
 The repository already includes the Xcode project, the app target, and the UI test target.
@@ -96,6 +110,31 @@ xcodebuild -project Tabora.xcodeproj -scheme Tabora -destination 'platform=macOS
 # UI tests only
 xcodebuild -project Tabora.xcodeproj -scheme Tabora -destination 'platform=macOS' -only-testing:TaboraUITests test
 ```
+
+## Release Automation
+
+Signed releases use a locally exported `Developer ID Application` certificate together with an App Store Connect API key for `notarytool`.
+
+Required GitHub repository secrets:
+
+- `APPLE_TEAM_ID`: Apple Developer Team ID
+- `APPLE_DEVELOPER_ID_P12_BASE64`: Base64-encoded `Developer ID Application` certificate exported as `.p12`
+- `APPLE_DEVELOPER_ID_P12_PASSWORD`: Password used when exporting the `.p12`
+- `APPLE_KEYCHAIN_PASSWORD`: Random password used for the temporary GitHub Actions keychain
+- `APPLE_APP_STORE_CONNECT_API_KEY_BASE64`: Base64-encoded App Store Connect API key (`.p8`) used for `notarytool`
+- `APPLE_APP_STORE_CONNECT_KEY_ID`: App Store Connect API key ID
+- `APPLE_APP_STORE_CONNECT_ISSUER_ID`: App Store Connect issuer ID
+- `HOMEBREW_TAP_TOKEN`: GitHub token with permission to dispatch updates to `mkusaka/homebrew-tap`
+
+The release workflow:
+
+- Runs the shared `Test` workflow first
+- Archives and exports a `Developer ID` signed app
+- Notarizes and staples the app
+- Uploads `Tabora.zip` to GitHub Releases for tag pushes
+- Dispatches a cask update to `mkusaka/homebrew-tap`
+
+Manual validation runs are supported through `workflow_dispatch`. They require signing secrets but skip GitHub Release creation and Homebrew tap updates.
 
 ## Task Breakdown
 
