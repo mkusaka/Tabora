@@ -83,7 +83,6 @@ final class TaboraRuntime {
             thumbnailService = ThumbnailService()
             activationService = WindowActivationService(permissionService: livePermissionService)
         }
-
         state = SwitcherState(
             windowCatalog: windowCatalog,
             thumbnailService: thumbnailService,
@@ -156,6 +155,7 @@ final class TaboraRuntime {
     func setup() {
         hotkeyManager.start()
         installUITestCommandTimerIfNeeded()
+        _ = refreshPermissionStatus(reason: "app launch")
 
         if configuration.autoPresentOnLaunch {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
@@ -165,7 +165,15 @@ final class TaboraRuntime {
     }
 
     func presentSwitcher(initialAdvance: Bool) {
+        TaboraLogger.log("switcher", "Present requested initialAdvance=\(initialAdvance)")
         state.present(initialAdvance: initialAdvance)
+    }
+
+    @discardableResult
+    func refreshPermissionStatus(reason: String) -> PermissionStatus {
+        let status = state.refreshPermissionStatus()
+        TaboraLogger.log("permission", "Refresh reason=\(reason) \(status.logSummary)")
+        return status
     }
 
     private func installUITestCommandTimerIfNeeded() {

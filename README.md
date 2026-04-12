@@ -4,6 +4,8 @@ Tabora is a macOS window switcher MVP inspired by AltTab.
 It is intentionally scoped to a practical first slice:
 
 - Global invocation with `Option + Tab`
+- A menu bar item for checking current permission status on demand
+- A menu bar toggle for `Start at Login`
 - Window-level enumeration instead of app-level switching
 - A centered overlay that shows thumbnails, window titles, app names, and app icons
 - Keyboard-driven navigation with graceful fallback when permissions or thumbnails are unavailable
@@ -29,7 +31,9 @@ Recommended runtime shape:
 ```text
 TaboraApp
 ├─ AppDelegate
+├─ MenuBarController
 ├─ TaboraRuntime
+├─ TaboraLogger
 ├─ HotkeyManager
 ├─ PermissionService
 ├─ WindowCatalogService
@@ -50,6 +54,7 @@ TaboraApp
 - CoreGraphics is still the most direct API for enumerating user-visible windows.
 - ScreenCaptureKit is the practical thumbnail path on modern macOS SDKs where older window-image APIs are no longer available.
 - Accessibility is needed for better window-level activation when app activation alone is not precise enough.
+- A status item keeps permission visibility available even when no overlay is visible, and key runtime events are printed to stdout for debugging.
 
 ## Bootstrap
 

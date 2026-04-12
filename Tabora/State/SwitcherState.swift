@@ -41,9 +41,15 @@ final class SwitcherState: ObservableObject {
         return entries[selectedIndex]
     }
 
-    func present(initialAdvance: Bool) {
+    @discardableResult
+    func refreshPermissionStatus() -> PermissionStatus {
         permissionStatus = permissionService.currentStatus()
         onPermissionStatusChanged?(permissionStatus)
+        return permissionStatus
+    }
+
+    func present(initialAdvance: Bool) {
+        refreshPermissionStatus()
         permissionService.primeForUserVisibleFlow()
 
         let windows = windowCatalog.snapshot()

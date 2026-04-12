@@ -28,19 +28,27 @@ struct WindowActivationService: WindowActivating {
 
     func activate(window: WindowEntry) async -> WindowActivationResult {
         guard let app = NSRunningApplication(processIdentifier: window.pid) else {
+            TaboraLogger.log("activation", "No running app for pid=\(window.pid) title=\(window.displayTitle)")
             return .failure(title: window.displayTitle)
         }
 
         let appActivated = app.activate(options: [.activateAllWindows])
         guard appActivated else {
+            TaboraLogger.log("activation", "App activation failed for pid=\(window.pid) title=\(window.displayTitle)")
             return .failure(title: window.displayTitle)
         }
 
         guard permissionService.currentStatus().accessibility == .granted else {
+            TaboraLogger.log("activation", "Accessibility missing, using app fallback for \(window.displayTitle)")
             return .appOnly(title: window.displayTitle)
         }
 
-        return raiseBestMatchingWindow(for: window) ? .success(title: window.displayTitle) : .appOnly(title: window.displayTitle)
+        let raised = raiseBestMatchingWindow(for: window)
+        TaboraLogger.log(
+            "activation",
+            raised ? "Raised exact window for \(window.displayTitle)" : "Fell back to app activation for \(window.displayTitle)"
+        )
+        return raised ? .success(title: window.displayTitle) : .appOnly(title: window.displayTitle)
     }
 
     private func raiseBestMatchingWindow(for target: WindowEntry) -> Bool {

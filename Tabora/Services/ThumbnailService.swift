@@ -13,6 +13,7 @@ struct ThumbnailService: ThumbnailProviding {
             let content = try? await SCShareableContent.current,
             let scWindow = content.windows.first(where: { $0.windowID == window.id })
         else {
+            TaboraLogger.log("thumbnail", "No shareable window for id=\(window.id) title=\(window.displayTitle)")
             return nil
         }
 
@@ -28,9 +29,14 @@ struct ThumbnailService: ThumbnailProviding {
         }
 
         guard let cgImage = try? await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration) else {
+            TaboraLogger.log("thumbnail", "Capture failed for id=\(window.id) title=\(window.displayTitle)")
             return nil
         }
 
+        TaboraLogger.log(
+            "thumbnail",
+            "Captured id=\(window.id) title=\(window.displayTitle) size=\(cgImage.width)x\(cgImage.height)"
+        )
         return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
     }
 }

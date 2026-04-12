@@ -4,6 +4,17 @@ enum PermissionAccessState: String, Codable {
     case granted
     case missing
     case unknown
+
+    var menuLabel: String {
+        switch self {
+        case .granted:
+            return "Granted"
+        case .missing:
+            return "Missing"
+        case .unknown:
+            return "Unknown"
+        }
+    }
 }
 
 struct PermissionStatus: Equatable {
@@ -31,5 +42,9 @@ struct PermissionStatus: Equatable {
         }
 
         return parts.joined(separator: " ")
+    }
+
+    var logSummary: String {
+        "screenCapture=\(screenCapture.rawValue) accessibility=\(accessibility.rawValue)"
     }
 }
