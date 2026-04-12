@@ -1,0 +1,211 @@
+import AppKit
+import SwiftUI
+
+struct TaboraConfiguration {
+    let isUITesting: Bool
+    let autoPresentOnLaunch: Bool
+    let screenCaptureOverride: PermissionAccessState?
+    let accessibilityOverride: PermissionAccessState?
+    let resultFilePath: String?
+    let selectionFilePath: String?
+    let snapshotFilePath: String?
+    let permissionFilePath: String?
+    let commandFilePath: String?
+    let seededWindows: [UITestWindowSeed]
+    let activationMode: UITestWindowActivationService.Mode
+
+    init(processInfo: ProcessInfo = .processInfo) {
+        let arguments = Set(processInfo.arguments)
+        let environment = processInfo.environment
+
+        isUITesting = arguments.contains("-uiTesting")
+        autoPresentOnLaunch = environment["UITEST_AUTOPRESENT"] == "1"
+        screenCaptureOverride = Self.parsePermission(environment["UITEST_SCREEN_PERMISSION"])
+        accessibilityOverride = Self.parsePermission(environment["UITEST_ACCESSIBILITY_PERMISSION"])
+        resultFilePath = environment["UITEST_RESULT_FILE"]
+        selectionFilePath = environment["UITEST_SELECTION_FILE"]
+        snapshotFilePath = environment["UITEST_SNAPSHOT_FILE"]
+        permissionFilePath = environment["UITEST_PERMISSION_FILE"]
+        commandFilePath = environment[UITestCommandBridge.commandFileEnvironmentKey]
+        seededWindows = UITestWindowSeed.decodeEnvironmentJSON(environment["UITEST_WINDOWS_JSON"])
+        activationMode = UITestWindowActivationService.Mode(rawValue: environment["UITEST_ACTIVATION_MODE"] ?? "") ?? .success
+    }
+
+    private static func parsePermission(_ rawValue: String?) -> PermissionAccessState? {
+        guard let rawValue else {
+            return nil
+        }
+
+        return PermissionAccessState(rawValue: rawValue)
+    }
+}
+
+@MainActor
+final class TaboraRuntime {
+    static let shared = TaboraRuntime()
+
+    let configuration: TaboraConfiguration
+    let state: SwitcherState
+
+    private let overlayWindowController: OverlayWindowController
+    private let hotkeyManager: HotkeyManager
+    private var uiTestCommandTimer: Timer?
+
+    private init(configuration: TaboraConfiguration = TaboraConfiguration()) {
+        self.configuration = configuration
+
+        let permissionService: any PermissionProviding
+        let windowCatalog: any WindowCataloging
+        let thumbnailService: any ThumbnailProviding
+        let activationService: any WindowActivating
+        let activationRecorder: UITestActivationRecorder?
+
+        if configuration.isUITesting {
+            let recorder = UITestActivationRecorder(
+                summaryFileURL: configuration.resultFilePath.map(URL.init(fileURLWithPath:))
+            )
+            activationRecorder = recorder
+            permissionService = UITestPermissionService(
+                screenCapture: configuration.screenCaptureOverride ?? .granted,
+                accessibility: configuration.accessibilityOverride ?? .granted
+            )
+            windowCatalog = UITestWindowCatalogService(seeds: configuration.seededWindows)
+            thumbnailService = UITestThumbnailService(seeds: configuration.seededWindows)
+            activationService = UITestWindowActivationService(
+                mode: configuration.activationMode,
+                recorder: recorder
+            )
+        } else {
+            activationRecorder = nil
+            let livePermissionService = PermissionService()
+            permissionService = livePermissionService
+            windowCatalog = WindowCatalogService()
+            thumbnailService = ThumbnailService()
+            activationService = WindowActivationService(permissionService: livePermissionService)
+        }
+
+        state = SwitcherState(
+            windowCatalog: windowCatalog,
+            thumbnailService: thumbnailService,
+            activationService: activationService,
+            permissionService: permissionService
+        )
+        let switcherState = state
+
+        overlayWindowController = OverlayWindowController(
+            state: switcherState,
+            onCycle: { forward in
+                switcherState.moveSelection(forward: forward)
+            },
+            onCancel: {
+                switcherState.cancel()
+            },
+            onConfirm: {
+                switcherState.confirmSelection()
+            },
+            onModifierFlagsChanged: { flags in
+                guard flags.contains(.option) == false else {
+                    return
+                }
+                switcherState.confirmSelection()
+            }
+        )
+
+        hotkeyManager = HotkeyManager {
+            if switcherState.isVisible {
+                switcherState.moveSelection(forward: true)
+            } else {
+                switcherState.present(initialAdvance: true)
+            }
+        }
+
+        state.onVisibilityChanged = { [weak self] isVisible in
+            self?.overlayWindowController.setVisible(isVisible)
+        }
+
+        state.onActivationSummaryChanged = { summary in
+            activationRecorder?.record(summary: summary)
+        }
+        state.onPermissionStatusChanged = { status in
+            guard let path = configuration.permissionFilePath else {
+                return
+            }
+            let url = URL(fileURLWithPath: path)
+            try? (status.overlayMessage ?? "").write(to: url, atomically: true, encoding: .utf8)
+        }
+        state.onSelectionChanged = { entry in
+            guard let path = configuration.selectionFilePath else {
+                return
+            }
+            let url = URL(fileURLWithPath: path)
+            try? (entry?.displayTitle ?? "").write(to: url, atomically: true, encoding: .utf8)
+        }
+        state.onEntriesChanged = { entries in
+            guard let path = configuration.snapshotFilePath else {
+                return
+            }
+            let url = URL(fileURLWithPath: path)
+            let snapshots = entries.map(UITestWindowSnapshot.init(entry:))
+            guard let data = try? JSONEncoder().encode(snapshots) else {
+                return
+            }
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    func setup() {
+        hotkeyManager.start()
+        installUITestCommandTimerIfNeeded()
+
+        if configuration.autoPresentOnLaunch {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                self?.presentSwitcher(initialAdvance: true)
+            }
+        }
+    }
+
+    func presentSwitcher(initialAdvance: Bool) {
+        state.present(initialAdvance: initialAdvance)
+    }
+
+    private func installUITestCommandTimerIfNeeded() {
+        guard
+            configuration.isUITesting,
+            uiTestCommandTimer == nil,
+            let commandFilePath = configuration.commandFilePath
+        else {
+            return
+        }
+
+        let commandFileURL = URL(fileURLWithPath: commandFilePath)
+        uiTestCommandTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            guard
+                let self,
+                let rawValue = try? String(contentsOf: commandFileURL, encoding: .utf8)
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                let command = UITestCommand(rawValue: rawValue),
+                !rawValue.isEmpty
+            else {
+                return
+            }
+
+            try? FileManager.default.removeItem(at: commandFileURL)
+            Task { @MainActor [weak self] in
+                self?.handleUITestCommand(command)
+            }
+        }
+    }
+
+    private func handleUITestCommand(_ command: UITestCommand) {
+        switch command {
+        case .cycleForward:
+            state.moveSelection(forward: true)
+        case .cycleBackward:
+            state.moveSelection(forward: false)
+        case .cancel:
+            state.cancel()
+        case .confirm:
+            state.confirmSelection()
+        }
+    }
+}
