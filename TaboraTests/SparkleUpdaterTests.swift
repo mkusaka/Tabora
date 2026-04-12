@@ -31,6 +31,7 @@ struct SparkleUpdaterTests {
 
         let titles = controller.statusItem?.menu?.items.map(\.title) ?? []
         #expect(titles.contains("Check for Updates…"))
+        #expect(titles.contains("About Tabora"))
     }
 
     @Test func infoPlistContainsFeedURL() {
@@ -41,5 +42,13 @@ struct SparkleUpdaterTests {
     @Test func infoPlistContainsPublicEDKey() {
         let publicKey = appBundle().object(forInfoDictionaryKey: "SUPublicEDKey") as? String
         #expect(publicKey != nil && !(publicKey?.isEmpty ?? true))
+    }
+
+    @Test func buildInfoContainsVersionAndCommitHash() {
+        #expect(!BuildInfo.version.isEmpty)
+        #expect(!BuildInfo.gitCommitHash.isEmpty)
+        #expect(BuildInfo.gitCommitHash != "unknown")
+        #expect(BuildInfo.gitCommitHashFull != "unknown")
+        #expect(BuildInfo.gitCommitHashFull.count >= BuildInfo.gitCommitHash.count)
     }
 }

@@ -49,6 +49,16 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private func configureMenu() {
         menu.delegate = self
 
+        let aboutItem = NSMenuItem(
+            title: "About Tabora",
+            action: #selector(showAboutPanel),
+            keyEquivalent: ""
+        )
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
+        menu.addItem(.separator())
+
         let showSwitcherItem = NSMenuItem(
             title: "Show Switcher",
             action: #selector(showSwitcher),
@@ -125,6 +135,16 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private func quitApp() {
         TaboraLogger.log("menu", "Quit selected")
         NSApp.terminate(nil)
+    }
+
+    @objc
+    private func showAboutPanel() {
+        TaboraLogger.log("menu", "About selected")
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.orderFrontStandardAboutPanel(options: [
+            .applicationVersion: "\(BuildInfo.version) (\(BuildInfo.gitCommitHash))",
+            .version: "",
+        ])
     }
 
     private func refreshMenuState(reason: String) {
