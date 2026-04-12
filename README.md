@@ -6,6 +6,7 @@ It is intentionally scoped to a practical first slice:
 - Global invocation with `Option + Tab`
 - A menu bar item for checking current permission status on demand
 - A menu bar toggle for `Start at Login`
+- A menu bar action for `Check for Updates…` via Sparkle
 - Window-level enumeration instead of app-level switching
 - A centered overlay that shows thumbnails, window titles, app names, and app icons
 - Keyboard-driven navigation with graceful fallback when permissions or thumbnails are unavailable
@@ -38,6 +39,7 @@ The MVP uses a mixed macOS architecture on purpose.
 - `CoreGraphics`: window enumeration
 - `ScreenCaptureKit`: window thumbnail capture on modern macOS SDKs
 - `Accessibility API`: best-effort exact window focusing and raising
+- `Sparkle`: in-app update checks against a signed appcast feed
 
 Recommended runtime shape:
 
@@ -68,6 +70,7 @@ TaboraApp
 - ScreenCaptureKit is the practical thumbnail path on modern macOS SDKs where older window-image APIs are no longer available.
 - Accessibility is needed for better window-level activation when app activation alone is not precise enough.
 - A status item keeps permission visibility available even when no overlay is visible, and key runtime events are printed to stdout for debugging.
+- Sparkle provides the native macOS updater UX, while signed GitHub Release ZIPs remain the canonical download artifact.
 
 ## Bootstrap
 
@@ -125,6 +128,7 @@ Required GitHub repository secrets:
 - `APPLE_APP_STORE_CONNECT_KEY_ID`: App Store Connect API key ID
 - `APPLE_APP_STORE_CONNECT_ISSUER_ID`: App Store Connect issuer ID
 - `HOMEBREW_TAP_TOKEN`: GitHub token with permission to dispatch updates to `mkusaka/homebrew-tap`
+- `SPARKLE_ED_PRIVATE_KEY`: Sparkle EdDSA private key used to sign release ZIPs for appcast delivery
 
 The release workflow:
 
@@ -133,8 +137,11 @@ The release workflow:
 - Notarizes and staples the app
 - Uploads `Tabora.zip` to GitHub Releases for tag pushes
 - Dispatches a cask update to `mkusaka/homebrew-tap`
+- Signs the release ZIP with Sparkle EdDSA and deploys `appcast.xml` to the `gh-pages` branch
 
 Manual validation runs are supported through `workflow_dispatch`. They require signing secrets but skip GitHub Release creation and Homebrew tap updates.
+
+For Sparkle to work in production, GitHub Pages must be enabled for this repository and configured to serve from the `gh-pages` branch.
 
 ## Task Breakdown
 

@@ -4,6 +4,7 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let runtime = TaboraRuntime.shared
     private var menuBarController: MenuBarController?
+    private let appUpdater = AppUpdaterController()
     private let loginItemManager = LoginItemService()
 
     func applicationDidFinishLaunching(_: Notification) {
@@ -14,7 +15,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         runtime.setup()
 
         if !runtime.configuration.isUITesting {
-            menuBarController = MenuBarController(runtime: runtime, loginItemManager: loginItemManager)
+            menuBarController = MenuBarController(
+                runtime: runtime,
+                loginItemManager: loginItemManager,
+                appUpdater: appUpdater
+            )
+            appUpdater.start()
         }
     }
 }

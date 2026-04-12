@@ -4,16 +4,21 @@ import AppKit
 final class MenuBarController: NSObject, NSMenuDelegate {
     private let runtime: TaboraRuntime
     private let loginItemManager: any LoginItemManaging
-    private let statusItem: NSStatusItem
+    private let appUpdater: AppUpdaterController
+    private(set) var statusItem: NSStatusItem?
     private let menu = NSMenu()
     private let startAtLoginItem = NSMenuItem(title: "Start at Login", action: nil, keyEquivalent: "")
     private let accessibilityItem = NSMenuItem(title: "Accessibility: Unknown", action: nil, keyEquivalent: "")
     private let screenCaptureItem = NSMenuItem(title: "Screen Recording: Unknown", action: nil, keyEquivalent: "")
 
-    init(runtime: TaboraRuntime, loginItemManager: any LoginItemManaging) {
+    init(
+        runtime: TaboraRuntime,
+        loginItemManager: any LoginItemManaging,
+        appUpdater: AppUpdaterController
+    ) {
         self.runtime = runtime
         self.loginItemManager = loginItemManager
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        self.appUpdater = appUpdater
         super.init()
         configureStatusItem()
         configureMenu()
@@ -21,12 +26,14 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     private func configureStatusItem() {
+        let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.title = ""
             button.image = menuBarIcon()
             button.imagePosition = .imageOnly
             button.toolTip = "Tabora"
         }
+        self.statusItem = statusItem
     }
 
     private func menuBarIcon() -> NSImage? {
@@ -62,6 +69,14 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         startAtLoginItem.target = self
         menu.addItem(startAtLoginItem)
 
+        let checkForUpdatesItem = NSMenuItem(
+            title: "Check for Updates…",
+            action: #selector(AppUpdaterController.checkForUpdates(_:)),
+            keyEquivalent: ""
+        )
+        checkForUpdatesItem.target = appUpdater
+        menu.addItem(checkForUpdatesItem)
+
         menu.addItem(.separator())
 
         accessibilityItem.isEnabled = false
@@ -80,7 +95,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         quitItem.target = self
         menu.addItem(quitItem)
 
-        statusItem.menu = menu
+        statusItem?.menu = menu
     }
 
     func menuNeedsUpdate(_: NSMenu) {

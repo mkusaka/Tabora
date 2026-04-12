@@ -4,7 +4,11 @@
 	classes = {
 	};
 	objectVersion = 77;
-	objects = {
+		objects = {
+
+/* Begin PBXBuildFile section */
+			8A7A00012F90000100000003 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 8A7A00012F90000100000002 /* Sparkle */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		7A62832B2F8AA32A007CEAA5 /* PBXContainerItemProxy */ = {
@@ -48,13 +52,14 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		7A6283192F8AA328007CEAA5 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
+			7A6283192F8AA328007CEAA5 /* Frameworks */ = {
+				isa = PBXFrameworksBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+					8A7A00012F90000100000003 /* Sparkle in Frameworks */,
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
 		7A6283272F8AA32A007CEAA5 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -98,22 +103,23 @@
 		7A62831B2F8AA328007CEAA5 /* Tabora */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7A62833E2F8AA32A007CEAA5 /* Build configuration list for PBXNativeTarget "Tabora" */;
-			buildPhases = (
-				7A6283182F8AA328007CEAA5 /* Sources */,
-				7A6283192F8AA328007CEAA5 /* Frameworks */,
-				7A62831A2F8AA328007CEAA5 /* Resources */,
-			);
+				buildPhases = (
+					7A6283182F8AA328007CEAA5 /* Sources */,
+					7A6283192F8AA328007CEAA5 /* Frameworks */,
+					7A62831A2F8AA328007CEAA5 /* Resources */,
+				);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			fileSystemSynchronizedGroups = (
-				7A62831E2F8AA328007CEAA5 /* Tabora */,
-			);
-			name = Tabora;
-			packageProductDependencies = (
-			);
-			productName = Tabora;
+				fileSystemSynchronizedGroups = (
+					7A62831E2F8AA328007CEAA5 /* Tabora */,
+				);
+				name = Tabora;
+				packageProductDependencies = (
+					8A7A00012F90000100000002 /* Sparkle */,
+				);
+				productName = Tabora;
 			productReference = 7A62831C2F8AA328007CEAA5 /* Tabora.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -189,14 +195,17 @@
 			buildConfigurationList = 7A6283172F8AA328007CEAA5 /* Build configuration list for PBXProject "Tabora" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
-			knownRegions = (
-				en,
-				Base,
-			);
-			mainGroup = 7A6283132F8AA328007CEAA5;
-			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
-			productRefGroup = 7A62831D2F8AA328007CEAA5 /* Products */;
+				knownRegions = (
+					en,
+					Base,
+				);
+				mainGroup = 7A6283132F8AA328007CEAA5;
+				minimizedProjectReferenceProxies = 1;
+				packageReferences = (
+					8A7A00012F90000100000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				);
+				preferredProjectObjectVersion = 77;
+				productRefGroup = 7A62831D2F8AA328007CEAA5 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -267,6 +276,25 @@
 			targetProxy = 7A6283352F8AA32A007CEAA5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+			8A7A00012F90000100000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+				isa = XCRemoteSwiftPackageReference;
+				repositoryURL = "https://github.com/sparkle-project/Sparkle";
+				requirement = {
+					kind = upToNextMajorVersion;
+					minimumVersion = 2.9.0;
+				};
+			};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+			8A7A00012F90000100000002 /* Sparkle */ = {
+				isa = XCSwiftPackageProductDependency;
+				package = 8A7A00012F90000100000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+				productName = Sparkle;
+			};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		7A62833C2F8AA32A007CEAA5 /* Debug */ = {
@@ -393,15 +421,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Tabora/Tabora.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
+					CODE_SIGN_STYLE = Automatic;
+					COMBINE_HIDPI_IMAGES = YES;
+					CURRENT_PROJECT_VERSION = 1;
+					ENABLE_PREVIEWS = YES;
+					GENERATE_INFOPLIST_FILE = NO;
+					INFOPLIST_FILE = Config/Tabora-Info.plist;
+					INFOPLIST_KEY_NSHumanReadableCopyright = "";
+					LD_RUNPATH_SEARCH_PATHS = (
+						"$(inherited)",
+						"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mkusaka.Tabora;
@@ -418,15 +447,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Tabora/Tabora.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
+					CODE_SIGN_STYLE = Automatic;
+					COMBINE_HIDPI_IMAGES = YES;
+					CURRENT_PROJECT_VERSION = 1;
+					ENABLE_PREVIEWS = YES;
+					GENERATE_INFOPLIST_FILE = NO;
+					INFOPLIST_FILE = Config/Tabora-Info.plist;
+					INFOPLIST_KEY_NSHumanReadableCopyright = "";
+					LD_RUNPATH_SEARCH_PATHS = (
+						"$(inherited)",
+						"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mkusaka.Tabora;
