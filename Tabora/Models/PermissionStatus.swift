@@ -8,11 +8,11 @@ enum PermissionAccessState: String, Codable {
     var menuLabel: String {
         switch self {
         case .granted:
-            return "Granted"
+            "Granted"
         case .missing:
-            return "Missing"
+            "Missing"
         case .unknown:
-            return "Unknown"
+            "Unknown"
         }
     }
 }
@@ -21,7 +21,7 @@ struct PermissionStatus: Equatable {
     let screenCapture: PermissionAccessState
     let accessibility: PermissionAccessState
 
-    static let unknown = PermissionStatus(
+    static let unknown = Self(
         screenCapture: .unknown,
         accessibility: .unknown
     )

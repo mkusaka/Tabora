@@ -28,7 +28,12 @@ struct ThumbnailService: ThumbnailProviding {
             configuration.shouldBeOpaque = true
         }
 
-        guard let cgImage = try? await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration) else {
+        guard
+            let cgImage = try? await SCScreenshotManager.captureImage(
+                contentFilter: filter,
+                configuration: configuration
+            )
+        else {
             TaboraLogger.log("thumbnail", "Capture failed for id=\(window.id) title=\(window.displayTitle)")
             return nil
         }
@@ -37,7 +42,10 @@ struct ThumbnailService: ThumbnailProviding {
             "thumbnail",
             "Captured id=\(window.id) title=\(window.displayTitle) size=\(cgImage.width)x\(cgImage.height)"
         )
-        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        return NSImage(
+            cgImage: cgImage,
+            size: NSSize(width: cgImage.width, height: cgImage.height)
+        )
     }
 }
 
@@ -60,7 +68,12 @@ struct UITestThumbnailService: ThumbnailProviding {
 
         return NSImage.makeMockThumbnail(
             title: window.displayTitle,
-            accentColor: NSColor(calibratedHue: CGFloat((window.id % 7)) / 7, saturation: 0.55, brightness: 0.92, alpha: 1)
+            accentColor: NSColor(
+                calibratedHue: CGFloat(window.id % 7) / 7,
+                saturation: 0.55,
+                brightness: 0.92,
+                alpha: 1
+            )
         )
     }
 }

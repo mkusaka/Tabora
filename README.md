@@ -12,9 +12,8 @@ It is intentionally scoped to a practical first slice:
 
 ## Status
 
-This repository is still in bootstrap phase.
-The first Xcode project creation step is expected to be done manually in Xcode.
-Everything else in this repository is structured so it can be dropped into that project immediately after bootstrap.
+The repository already includes the Xcode project, the app target, and the UI test target.
+The current MVP is buildable and testable as-is.
 
 ## Architecture
 
@@ -58,19 +57,49 @@ TaboraApp
 
 ## Bootstrap
 
-Detailed bootstrap instructions are in [docs/BOOTSTRAP.md](/Users/masatomokusaka/src/github.com/mkusaka/Tabora/docs/BOOTSTRAP.md).
+Open [Tabora.xcodeproj](Tabora.xcodeproj), build the `Tabora` scheme, and run the app.
 
-The short version:
+If you need to recreate the project from scratch in Xcode, the original bootstrap notes are in [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md).
 
-1. Create a new Xcode `macOS App` named `Tabora` with `SwiftUI` and `Swift`.
-2. Keep the project inside this repository root.
-3. Add the existing `Tabora/` and `TaboraUITests/` folders to the project after creation.
-4. Wire the files to the `Tabora` and `TaboraUITests` targets.
-5. Enable Accessibility and Screen Recording related usage/testing flow locally.
+## Tooling
+
+This repository uses `mise` to pin CLI tools for formatting and linting.
+
+```bash
+brew install mise
+mise trust
+mise install
+```
+
+## Lint
+
+```bash
+mise exec -- swiftformat --lint .
+mise exec -- swiftlint lint --quiet
+```
+
+## Format
+
+```bash
+mise exec -- swiftformat .
+```
+
+## Test
+
+```bash
+# All tests
+xcodebuild -project Tabora.xcodeproj -scheme Tabora -destination 'platform=macOS' test
+
+# Unit tests only
+xcodebuild -project Tabora.xcodeproj -scheme Tabora -destination 'platform=macOS' -only-testing:TaboraTests test
+
+# UI tests only
+xcodebuild -project Tabora.xcodeproj -scheme Tabora -destination 'platform=macOS' -only-testing:TaboraUITests test
+```
 
 ## Task Breakdown
 
-Detailed task decomposition is in [docs/TODO.md](/Users/masatomokusaka/src/github.com/mkusaka/Tabora/docs/TODO.md).
+Detailed task decomposition is in [docs/TODO.md](docs/TODO.md).
 
 The tasks are split so the risky platform work is isolated:
 

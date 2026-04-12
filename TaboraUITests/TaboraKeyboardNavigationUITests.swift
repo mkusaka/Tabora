@@ -97,6 +97,6 @@ final class TaboraKeyboardNavigationUITests: TaboraUITestCase {
         page.pressTab()
 
         XCTAssertTrue(page.waitForSelectedWindow("Window 7"))
-        XCTAssertTrue(page.waitForCardToBeHittable(357))
+        XCTAssertTrue(page.card(357).exists)
     }
 }

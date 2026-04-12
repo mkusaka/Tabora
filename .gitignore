@@ -60,3 +60,9 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# LLVM profile data
+*.profraw
+
+# mise
+.mise.local.toml

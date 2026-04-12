@@ -1,21 +1,17 @@
 import XCTest
 
 class TaboraUITestCase: XCTestCase {
-    var app: XCUIApplication!
-    var page: TaboraPage!
+    let app = XCUIApplication()
+    lazy var page = TaboraPage(app: app)
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
-        page = TaboraPage(app: app)
     }
 
     override func tearDown() {
-        if let app, app.state != .notRunning {
+        if app.state != .notRunning {
             app.terminate()
         }
-        app = nil
-        page = nil
     }
 
     func makeSeed(

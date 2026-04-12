@@ -1,7 +1,7 @@
 import Carbon.HIToolbox
 import Foundation
 
-private let taboraHotKeySignature: OSType = 0x54414252
+private let taboraHotKeySignature: OSType = 0x5441_4252
 
 private func taboraHotKeyHandler(
     _: EventHandlerCallRef?,

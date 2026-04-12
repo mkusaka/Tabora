@@ -46,7 +46,6 @@ struct WindowItemView: View {
         .accessibilityValue(isSelected ? "selected" : "unselected")
     }
 
-    @ViewBuilder
     private var thumbnailArea: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 18, style: .continuous)

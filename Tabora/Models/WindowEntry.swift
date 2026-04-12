@@ -21,7 +21,7 @@ struct WindowEntry: Identifiable, Hashable {
         hasher.combine(id)
     }
 
-    static func == (lhs: WindowEntry, rhs: WindowEntry) -> Bool {
+    static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id
     }
 }

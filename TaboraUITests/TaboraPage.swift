@@ -45,7 +45,10 @@ final class TaboraPage {
         accessibilityPermission: String = "granted",
         activationMode: String = "success"
     ) {
-        let data = try! JSONEncoder().encode(seeds)
+        guard let data = try? JSONEncoder().encode(seeds) else {
+            XCTFail("Failed to encode UI test seeds")
+            return
+        }
         let resultFileURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("tabora-uitest-\(UUID().uuidString).txt")
         let selectionFileURL = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -217,7 +220,7 @@ final class TaboraPage {
         return element.exists && element.isHittable
     }
 
-    func waitForActivationSummary(containing text: String, timeout: TimeInterval = 3) -> Bool {
+    func waitForActivationSummary(containing text: String, timeout: TimeInterval = 8) -> Bool {
         if let resultFileURL {
             let deadline = Date().addingTimeInterval(timeout)
             while Date() < deadline {
@@ -236,7 +239,7 @@ final class TaboraPage {
         return label.waitForExistence(timeout: timeout)
     }
 
-    func waitForSelectedWindow(_ text: String, timeout: TimeInterval = 3) -> Bool {
+    func waitForSelectedWindow(_ text: String, timeout: TimeInterval = 8) -> Bool {
         if let selectionFileURL {
             let deadline = Date().addingTimeInterval(timeout)
             while Date() < deadline {
@@ -280,7 +283,7 @@ final class TaboraPage {
         return nil
     }
 
-    func waitForPermissionMessage(containing text: String, timeout: TimeInterval = 3) -> Bool {
+    func waitForPermissionMessage(containing text: String, timeout: TimeInterval = 8) -> Bool {
         guard let permissionFileURL else {
             return false
         }

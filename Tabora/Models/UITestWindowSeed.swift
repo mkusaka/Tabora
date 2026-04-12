@@ -24,11 +24,11 @@ struct UITestWindowSeed: Codable, Hashable {
         CGRect(x: x, y: y, width: width, height: height)
     }
 
-    static func decodeEnvironmentJSON(_ json: String?) -> [UITestWindowSeed] {
+    static func decodeEnvironmentJSON(_ json: String?) -> [Self] {
         guard
             let json,
             let data = json.data(using: .utf8),
-            let seeds = try? JSONDecoder().decode([UITestWindowSeed].self, from: data)
+            let seeds = try? JSONDecoder().decode([Self].self, from: data)
         else {
             return defaultSeeds
         }
@@ -36,8 +36,8 @@ struct UITestWindowSeed: Codable, Hashable {
         return seeds
     }
 
-    static let defaultSeeds: [UITestWindowSeed] = [
-        UITestWindowSeed(
+    static let defaultSeeds: [Self] = [
+        Self(
             id: 101,
             pid: 3001,
             appName: "Safari",
@@ -50,7 +50,7 @@ struct UITestWindowSeed: Codable, Hashable {
             layer: 0,
             thumbnailMode: .success
         ),
-        UITestWindowSeed(
+        Self(
             id: 102,
             pid: 3002,
             appName: "Notes",
@@ -63,7 +63,7 @@ struct UITestWindowSeed: Codable, Hashable {
             layer: 0,
             thumbnailMode: .success
         ),
-        UITestWindowSeed(
+        Self(
             id: 103,
             pid: 3003,
             appName: "Terminal",

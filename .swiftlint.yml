@@ -1,0 +1,36 @@
+excluded:
+  - .build
+  - DerivedData
+
+# Conflict resolution with SwiftFormat defaults
+disabled_rules:
+  - trailing_comma
+  - opening_brace
+
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - closure_spacing
+  - contains_over_first_not_nil
+  - discouraged_optional_boolean
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - overridden_super_call
+  - redundant_nil_coalescing
+  - sorted_imports
+  - toggle_bool
+  - first_where
+  - last_where
+  - sorted_first_last
+  - direct_return
+  - shorthand_optional_binding
+  - private_swiftui_state
+  - prefer_self_in_static_references
+
+identifier_name:
+  min_length:
+    warning: 1
+  excluded:
+    - id
+
+reporter: xcode

@@ -16,7 +16,7 @@ Once this is done, the repository contents are ready to be wired into the projec
    - Language: `Swift`
    - Testing System: `XCTest`
    - Storage: `None` unless you intentionally want SwiftData
-5. Save the project into this repository root: `/Users/masatomokusaka/src/github.com/mkusaka/Tabora`
+5. Save the project into this repository root (the directory containing this `docs/` folder).
 6. If Xcode asks about Git repository creation, do not create another Git repo.
 
 ## 2. Create Targets

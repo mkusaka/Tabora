@@ -5,23 +5,23 @@
 //  Created by Masatomo Kusaka on 2026/04/12.
 //
 
-import Testing
 @testable import Tabora
+import Testing
 
 struct TaboraTests {
-    @Test func permissionStateExposesMenuLabel() async throws {
+    @Test func permissionStateExposesMenuLabel() {
         #expect(PermissionAccessState.granted.menuLabel == "Granted")
         #expect(PermissionAccessState.missing.menuLabel == "Missing")
         #expect(PermissionAccessState.unknown.menuLabel == "Unknown")
     }
 
-    @Test func permissionStatusBuildsOverlayMessageAndLogSummary() async throws {
+    @Test func permissionStatusBuildsOverlayMessageAndLogSummary() {
         let status = PermissionStatus(screenCapture: .missing, accessibility: .granted)
         #expect(status.overlayMessage?.contains("Screen Recording permission is missing") == true)
         #expect(status.logSummary == "screenCapture=missing accessibility=granted")
     }
 
-    @Test func loginItemStatusExposesMenuMetadata() async throws {
+    @Test func loginItemStatusExposesMenuMetadata() {
         #expect(LoginItemStatus.enabled.menuDescription == "Enabled")
         #expect(LoginItemStatus.enabled.menuState == .on)
         #expect(LoginItemStatus.enabled.canToggle)

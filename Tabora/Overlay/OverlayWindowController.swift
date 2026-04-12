@@ -40,7 +40,11 @@ final class OverlayWindowController {
     }
 
     func setVisible(_ visible: Bool) {
-        visible ? show() : hide()
+        if visible {
+            show()
+        } else {
+            hide()
+        }
     }
 
     private func show() {

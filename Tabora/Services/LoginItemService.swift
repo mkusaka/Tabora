@@ -17,24 +17,24 @@ enum LoginItemStatus: Equatable {
     var menuDescription: String {
         switch self {
         case .enabled:
-            return "Enabled"
+            "Enabled"
         case .disabled:
-            return "Disabled"
+            "Disabled"
         case .requiresApproval:
-            return "Needs Approval"
+            "Needs Approval"
         case .unavailable:
-            return "Unavailable"
+            "Unavailable"
         }
     }
 
     var menuState: NSControl.StateValue {
         switch self {
         case .enabled:
-            return .on
+            .on
         case .disabled, .unavailable:
-            return .off
+            .off
         case .requiresApproval:
-            return .mixed
+            .mixed
         }
     }
 
@@ -53,16 +53,15 @@ struct LoginItemService: LoginItemManaging {
             return .unavailable
         }
 
-        let status: LoginItemStatus
-        switch SMAppService.mainApp.status {
+        let status: LoginItemStatus = switch SMAppService.mainApp.status {
         case .enabled:
-            status = .enabled
+            .enabled
         case .notRegistered, .notFound:
-            status = .disabled
+            .disabled
         case .requiresApproval:
-            status = .requiresApproval
+            .requiresApproval
         @unknown default:
-            status = .unavailable
+            .unavailable
         }
 
         TaboraLogger.log("login-item", "Current status: \(status.menuDescription)")

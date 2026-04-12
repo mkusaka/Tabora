@@ -21,8 +21,13 @@ final class OverlayPanel: NSPanel {
     var onConfirm: (() -> Void)?
     var onModifierFlagsChanged: ((NSEvent.ModifierFlags) -> Void)?
 
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
+    override var canBecomeKey: Bool {
+        true
+    }
+
+    override var canBecomeMain: Bool {
+        false
+    }
 
     override func keyDown(with event: NSEvent) {
         if isTabNavigationEvent(event) {

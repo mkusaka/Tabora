@@ -10,11 +10,11 @@ enum WindowActivationResult: Equatable {
     var userFacingDescription: String {
         switch self {
         case let .success(title):
-            return "Activated \(title)"
+            "Activated \(title)"
         case let .appOnly(title):
-            return "Activated app fallback for \(title)"
+            "Activated app fallback for \(title)"
         case let .failure(title):
-            return "Failed to activate \(title)"
+            "Failed to activate \(title)"
         }
     }
 }
@@ -46,7 +46,9 @@ struct WindowActivationService: WindowActivating {
         let raised = raiseBestMatchingWindow(for: window)
         TaboraLogger.log(
             "activation",
-            raised ? "Raised exact window for \(window.displayTitle)" : "Fell back to app activation for \(window.displayTitle)"
+            raised
+                ? "Raised exact window for \(window.displayTitle)"
+                : "Fell back to app activation for \(window.displayTitle)"
         )
         return raised ? .success(title: window.displayTitle) : .appOnly(title: window.displayTitle)
     }
@@ -57,7 +59,9 @@ struct WindowActivationService: WindowActivating {
             return false
         }
 
-        guard let bestMatch = windows.max(by: { score($0, against: target) < score($1, against: target) }) else {
+        guard
+            let bestMatch = windows.max(by: { score($0, against: target) < score($1, against: target) })
+        else {
             return false
         }
 
@@ -82,7 +86,7 @@ struct WindowActivationService: WindowActivating {
         if let title = copyStringAttribute(kAXTitleAttribute as CFString, from: windowElement) {
             if title == target.title {
                 total += 5
-            } else if !target.title.isEmpty && title.localizedCaseInsensitiveContains(target.title) {
+            } else if !target.title.isEmpty, title.localizedCaseInsensitiveContains(target.title) {
                 total += 2
             }
         }
@@ -116,7 +120,10 @@ struct WindowActivationService: WindowActivating {
             return nil
         }
 
+        // AXUIElementCopyAttributeValue returns AXValue-backed CFTypeRefs for these attributes.
+        // swiftlint:disable:next force_cast
         let positionAX = positionValue as! AXValue
+        // swiftlint:disable:next force_cast
         let sizeAX = sizeValue as! AXValue
 
         var point = CGPoint.zero
@@ -176,15 +183,13 @@ struct UITestWindowActivationService: WindowActivating {
     let recorder: UITestActivationRecorder
 
     func activate(window: WindowEntry) async -> WindowActivationResult {
-        let result: WindowActivationResult
-
-        switch mode {
+        let result: WindowActivationResult = switch mode {
         case .success:
-            result = .success(title: window.displayTitle)
+            .success(title: window.displayTitle)
         case .appOnly:
-            result = .appOnly(title: window.displayTitle)
+            .appOnly(title: window.displayTitle)
         case .failure:
-            result = .failure(title: window.displayTitle)
+            .failure(title: window.displayTitle)
         }
 
         await MainActor.run {
