@@ -3,6 +3,8 @@ excluded:
   - DerivedData
 
 # Conflict resolution with SwiftFormat defaults
+# - trailing_comma: SwiftFormat keeps trailing commas in multiline literals and argument lists
+# - opening_brace: SwiftFormat places braces on the next line for multiline if/guard conditions
 disabled_rules:
   - trailing_comma
   - opening_brace
