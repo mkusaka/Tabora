@@ -5,5 +5,13 @@
     <link>https://github.com/mkusaka/Tabora</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
+    <item>
+        <title>Version 0.0.1</title>
+        <pubDate>Sun, 12 Apr 2026 20:00:02 +0000</pubDate>
+        <sparkle:version>0.0.1</sparkle:version>
+        <sparkle:shortVersionString>0.0.1</sparkle:shortVersionString>
+        <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+        <enclosure url="https://github.com/mkusaka/Tabora/releases/download/v0.0.1/Tabora.zip" sparkle:edSignature="FCtEzv8NqA6OMyBvtxUrdrqQpwUJT85fEk+H3uEu4DnXdTwPwLJRE19pmJai0xn7RT1hbN+4gWlSEZgStAfrAQ==" length="1128293" type="application/octet-stream"/>
+    </item>
   </channel>
 </rss>
