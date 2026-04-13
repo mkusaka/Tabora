@@ -5,6 +5,16 @@ protocol WindowCataloging {
     func snapshot() -> [WindowEntry]
 }
 
+protocol FrontmostApplicationProviding {
+    var frontmostApplicationPID: pid_t? { get }
+}
+
+struct WorkspaceFrontmostApplicationProvider: FrontmostApplicationProviding {
+    var frontmostApplicationPID: pid_t? {
+        NSWorkspace.shared.frontmostApplication?.processIdentifier
+    }
+}
+
 struct WindowCatalogService: WindowCataloging {
     private let minimumWidth: CGFloat = 140
     private let minimumHeight: CGFloat = 90
@@ -15,6 +25,11 @@ struct WindowCatalogService: WindowCataloging {
         "Control Center",
         "Spotlight",
     ]
+    private let frontmostApplicationProvider: any FrontmostApplicationProviding
+
+    init(frontmostApplicationProvider: any FrontmostApplicationProviding = WorkspaceFrontmostApplicationProvider()) {
+        self.frontmostApplicationProvider = frontmostApplicationProvider
+    }
 
     func snapshot() -> [WindowEntry] {
         guard
@@ -26,7 +41,17 @@ struct WindowCatalogService: WindowCataloging {
             return []
         }
 
-        return windowList.compactMap(makeEntry)
+        let entries = windowList.compactMap(makeEntry)
+        return Self.filter(entries, frontmostApplicationPID: frontmostApplicationProvider.frontmostApplicationPID)
+    }
+
+    static func filter(_ entries: [WindowEntry], frontmostApplicationPID: pid_t?) -> [WindowEntry] {
+        guard let frontmostApplicationPID else {
+            return entries
+        }
+
+        let filteredEntries = entries.filter { $0.pid == frontmostApplicationPID }
+        return filteredEntries.isEmpty ? entries : filteredEntries
     }
 
     private func makeEntry(from raw: [String: Any]) -> WindowEntry? {

@@ -7,7 +7,7 @@ It is intentionally scoped to a practical first slice:
 - A menu bar item for checking current permission status on demand
 - A menu bar toggle for `Start at Login`
 - A menu bar action for `Check for Updates…` via Sparkle
-- Window-level enumeration instead of app-level switching
+- Window-level enumeration scoped to the frontmost app
 - A centered overlay that shows thumbnails, window titles, app names, and app icons
 - Keyboard-driven navigation with graceful fallback when permissions or thumbnails are unavailable
 
@@ -172,7 +172,7 @@ That means:
 - Exact window raising is still best-effort and depends on Accessibility permission plus AX window matching.
 - Thumbnail capture for third-party windows depends on Screen Recording permission.
 - Multi-display placement is intentionally simple in MVP.
-- The initial ordering is front-to-back snapshot based, not a sophisticated MRU model.
+- The initial ordering is front-to-back snapshot based within the frontmost app, not a sophisticated MRU model.
 - `Option + Tab` global registration is planned with Carbon hotkeys, while repeated navigation happens in the overlay panel itself.
 
 ## Post-MVP

@@ -53,7 +53,7 @@ Acceptance criteria:
 
 Acceptance criteria:
 
-- The window list is window-level, not app-level
+- The window list is window-level within the frontmost app, not app-level
 - Tiny, transparent, or obvious system noise windows are mostly absent
 
 ## Phase 4: Thumbnail Pipeline
