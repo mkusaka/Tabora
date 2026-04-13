@@ -21,6 +21,25 @@ struct SparkleUpdaterTests {
         return Bundle.allBundles.first(where: { $0.bundleIdentifier == "com.mkusaka.Tabora" }) ?? Bundle.main
     }
 
+    private func expectedSparkleBuildVersion(for marketingVersion: String) -> String? {
+        let components = marketingVersion.split(separator: ".", omittingEmptySubsequences: false)
+        guard components.count <= 3 else {
+            return nil
+        }
+
+        let normalized = components + Array(repeating: Substring("0"), count: max(0, 3 - components.count))
+        guard
+            let major = Int(normalized[0]),
+            let minor = Int(normalized[1]),
+            let patch = Int(normalized[2])
+        else {
+            return nil
+        }
+
+        let buildVersion = max(2, major * 10_000 + minor * 100 + patch)
+        return String(buildVersion)
+    }
+
     @MainActor
     @Test func menuContainsCheckForUpdatesItem() {
         let controller = MenuBarController(
@@ -42,6 +61,16 @@ struct SparkleUpdaterTests {
     @Test func infoPlistContainsPublicEDKey() {
         let publicKey = appBundle().object(forInfoDictionaryKey: "SUPublicEDKey") as? String
         #expect(publicKey != nil && !(publicKey?.isEmpty ?? true))
+    }
+
+    @Test func bundleVersionMatchesSparkleBuildVersionScheme() {
+        let bundle = appBundle()
+        let marketingVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let buildVersion = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+
+        #expect(marketingVersion != nil)
+        #expect(buildVersion != nil)
+        #expect(expectedSparkleBuildVersion(for: marketingVersion ?? "") == buildVersion)
     }
 
     @Test func buildInfoContainsVersionAndCommitHash() {

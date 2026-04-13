@@ -8,7 +8,7 @@ on:
       version:
         description: Version string used for validation builds
         required: false
-        default: "0.0.0"
+        default: "0.0.4"
         type: string
 
 permissions: {}
@@ -59,7 +59,21 @@ jobs:
             exit 1
           fi
 
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          IFS='.' read -r major minor patch <<<"$VERSION"
+          major=${major:-0}
+          minor=${minor:-0}
+          patch=${patch:-0}
+
+          BUILD_VERSION=$((10#$major * 10000 + 10#$minor * 100 + 10#$patch))
+          if (( BUILD_VERSION < 2 )); then
+            # v0.0.1 shipped with CFBundleVersion=1, so future Sparkle updates must compare greater than 1.
+            BUILD_VERSION=2
+          fi
+
+          {
+            echo "VERSION=$VERSION"
+            echo "BUILD_VERSION=$BUILD_VERSION"
+          } >> "$GITHUB_ENV"
 
       - name: Validate signing secrets
         env:
@@ -132,7 +146,7 @@ jobs:
             ENABLE_HARDENED_RUNTIME=YES \
             OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
             MARKETING_VERSION="$VERSION" \
-            CURRENT_PROJECT_VERSION="$VERSION"
+            CURRENT_PROJECT_VERSION="$BUILD_VERSION"
 
       - name: Export signed app
         run: |
@@ -161,13 +175,18 @@ jobs:
       - name: Verify signed app
         run: |
           INFOPLIST_PATH="build/export/${APP_NAME}.app/Contents/Info.plist"
-          for key in CFBundleShortVersionString CFBundleVersion; do
-            value=$(/usr/libexec/PlistBuddy -c "Print :$key" "$INFOPLIST_PATH")
-            if [[ "$value" != "$VERSION" ]]; then
-              echo "::error::$key is '$value' but expected '$VERSION'"
-              exit 1
-            fi
-          done
+          short_version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INFOPLIST_PATH")
+          build_version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$INFOPLIST_PATH")
+
+          if [[ "$short_version" != "$VERSION" ]]; then
+            echo "::error::CFBundleShortVersionString is '$short_version' but expected '$VERSION'"
+            exit 1
+          fi
+
+          if [[ "$build_version" != "$BUILD_VERSION" ]]; then
+            echo "::error::CFBundleVersion is '$build_version' but expected '$BUILD_VERSION'"
+            exit 1
+          fi
 
           codesign --verify --deep --strict --verbose=2 "build/export/${APP_NAME}.app"
 
@@ -254,7 +273,7 @@ jobs:
               <item>
                   <title>Version ${VERSION}</title>
                   <pubDate>${PUB_DATE}</pubDate>
-                  <sparkle:version>${VERSION}</sparkle:version>
+                  <sparkle:version>${BUILD_VERSION}</sparkle:version>
                   <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
                   <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
                   <enclosure url="${DOWNLOAD_URL}" sparkle:edSignature="${SPARKLE_ED_SIGNATURE}" length="${SPARKLE_FILE_LENGTH}" type="application/octet-stream"/>

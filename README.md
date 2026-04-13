@@ -141,6 +141,8 @@ The release workflow:
 
 Manual validation runs are supported through `workflow_dispatch`. They require signing secrets but skip GitHub Release creation and Homebrew tap updates.
 
+Sparkle compares updates using `CFBundleVersion` / `sparkle:version`, not the human-readable `CFBundleShortVersionString`. This project keeps the visible release version as `0.0.x`, but publishes a numeric Sparkle build version derived from it so upgrades remain monotonic across shipped releases.
+
 For Sparkle to work in production, GitHub Pages must be enabled for this repository and configured to serve from the `gh-pages` branch.
 
 ## Task Breakdown
