@@ -131,7 +131,8 @@ jobs:
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             ENABLE_HARDENED_RUNTIME=YES \
             OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
-            MARKETING_VERSION="$VERSION"
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$VERSION"
 
       - name: Export signed app
         run: |
@@ -159,6 +160,15 @@ jobs:
 
       - name: Verify signed app
         run: |
+          INFOPLIST_PATH="build/export/${APP_NAME}.app/Contents/Info.plist"
+          for key in CFBundleShortVersionString CFBundleVersion; do
+            value=$(/usr/libexec/PlistBuddy -c "Print :$key" "$INFOPLIST_PATH")
+            if [[ "$value" != "$VERSION" ]]; then
+              echo "::error::$key is '$value' but expected '$VERSION'"
+              exit 1
+            fi
+          done
+
           codesign --verify --deep --strict --verbose=2 "build/export/${APP_NAME}.app"
 
       - name: Notarize app
