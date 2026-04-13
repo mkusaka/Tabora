@@ -4,5 +4,5 @@
 enum BuildInfo {
     static let gitCommitHash = "unknown"
     static let gitCommitHashFull = "unknown"
-    static let version = "1.0"
+    static let version = "0.0.4"
 }
