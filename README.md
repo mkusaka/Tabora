@@ -141,6 +141,58 @@ The release workflow:
 
 Manual validation runs are supported through `workflow_dispatch`. They require signing secrets but skip GitHub Release creation and Homebrew tap updates.
 
+### How To Cut A Release
+
+1. Merge the release target changes into `main` and confirm the `Test` workflow is green.
+2. Create and push a semantic version tag.
+
+```bash
+VERSION=0.0.5
+git tag "v${VERSION}"
+git push origin "v${VERSION}"
+```
+
+3. Watch the `Release` workflow that was triggered by the tag push.
+
+```bash
+gh run list --workflow Release --limit 5
+gh run watch
+```
+
+4. Verify that the workflow produced all downstream artifacts.
+
+```bash
+gh release view "v${VERSION}"
+curl -fsSL https://mkusaka.github.io/Tabora/appcast.xml | rg "<sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>"
+```
+
+Expected results:
+
+- a signed `Tabora.zip` attached to the GitHub Release
+- a cask update dispatch to `mkusaka/homebrew-tap`
+- an updated `appcast.xml` on the `gh-pages` branch
+
+The workflow derives the release version from the tag name, so repository files do not need a manual version bump just for release publication.
+
+### How To Run A Validation Build
+
+Use `workflow_dispatch` on the `Release` workflow when you want to validate signing, notarization, and export without publishing a GitHub Release or updating Homebrew / Sparkle delivery.
+
+Dispatch it with a version input, for example:
+
+```bash
+gh workflow run Release --field version=0.0.5
+gh run list --workflow Release --limit 5
+gh run watch
+```
+
+The workflow will:
+
+- set `CFBundleShortVersionString` from that version
+- derive a numeric `CFBundleVersion` for Sparkle comparisons
+- build, sign, notarize, and export the app
+- skip GitHub Release creation, Homebrew dispatch, and `gh-pages` appcast deployment
+
 Sparkle compares updates using `CFBundleVersion` / `sparkle:version`, not the human-readable `CFBundleShortVersionString`. This project keeps the visible release version as `0.0.x`, but publishes a numeric Sparkle build version derived from it so upgrades remain monotonic across shipped releases.
 
 For Sparkle to work in production, GitHub Pages must be enabled for this repository and configured to serve from the `gh-pages` branch.
