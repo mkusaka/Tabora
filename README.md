@@ -101,6 +101,17 @@ mise exec -- swiftlint lint --quiet
 mise exec -- swiftformat .
 ```
 
+## Git Hooks
+
+Install the repo-local hooks after `mise install`:
+
+```bash
+mise exec -- lefthook install
+```
+
+The `pre-commit` hook formats staged Swift files with `swiftformat`, re-stages
+any fixes, and then runs `swiftlint` against the staged Swift files.
+
 ## Test
 
 ```bash

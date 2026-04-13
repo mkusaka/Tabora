@@ -44,6 +44,7 @@ jobs:
               - 'TaboraTests/**'
               - 'TaboraUITests/**'
               - 'mise.toml'
+              - 'lefthook.yml'
               - '.swiftformat'
               - '.swiftlint.yml'
               - '.github/workflows/test.yml'
