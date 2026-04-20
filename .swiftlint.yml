@@ -1,6 +1,7 @@
 excluded:
   - .build
   - DerivedData
+  - scripts
 
 # Conflict resolution with SwiftFormat defaults
 # - trailing_comma: SwiftFormat keeps trailing commas in multiline literals and argument lists

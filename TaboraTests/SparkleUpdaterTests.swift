@@ -36,7 +36,7 @@ struct SparkleUpdaterTests {
             return nil
         }
 
-        let buildVersion = major * 10_000 + minor * 100 + patch
+        let buildVersion = major * 10000 + minor * 100 + patch
         return String(buildVersion)
     }
 
