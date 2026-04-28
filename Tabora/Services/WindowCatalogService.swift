@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import CoreGraphics
 
 protocol WindowCataloging {
@@ -26,9 +27,14 @@ struct WindowCatalogService: WindowCataloging {
         "Spotlight",
     ]
     private let frontmostApplicationProvider: any FrontmostApplicationProviding
+    private let minimizedWindowProvider: any MinimizedWindowProviding
 
-    init(frontmostApplicationProvider: any FrontmostApplicationProviding = WorkspaceFrontmostApplicationProvider()) {
+    init(
+        frontmostApplicationProvider: any FrontmostApplicationProviding = WorkspaceFrontmostApplicationProvider(),
+        minimizedWindowProvider: any MinimizedWindowProviding = AccessibilityMinimizedWindowProvider()
+    ) {
         self.frontmostApplicationProvider = frontmostApplicationProvider
+        self.minimizedWindowProvider = minimizedWindowProvider
     }
 
     func snapshot() -> [WindowEntry] {
@@ -41,8 +47,11 @@ struct WindowCatalogService: WindowCataloging {
             return []
         }
 
-        let entries = windowList.compactMap(makeEntry)
-        return Self.filter(entries, frontmostApplicationPID: frontmostApplicationProvider.frontmostApplicationPID)
+        let onScreenEntries = windowList.compactMap(makeEntry)
+        let frontmostApplicationPID = frontmostApplicationProvider.frontmostApplicationPID
+        let minimizedEntries = frontmostApplicationPID.map(minimizedWindows(for:)) ?? []
+        let entries = Self.merge(onScreenEntries: onScreenEntries, minimizedEntries: minimizedEntries)
+        return Self.filter(entries, frontmostApplicationPID: frontmostApplicationPID)
     }
 
     static func filter(_ entries: [WindowEntry], frontmostApplicationPID: pid_t?) -> [WindowEntry] {
@@ -52,6 +61,11 @@ struct WindowCatalogService: WindowCataloging {
 
         let filteredEntries = entries.filter { $0.pid == frontmostApplicationPID }
         return filteredEntries.isEmpty ? entries : filteredEntries
+    }
+
+    static func merge(onScreenEntries: [WindowEntry], minimizedEntries: [WindowEntry]) -> [WindowEntry] {
+        let onScreenIDs = Set(onScreenEntries.map(\.id))
+        return onScreenEntries + minimizedEntries.filter { !onScreenIDs.contains($0.id) }
     }
 
     private func makeEntry(from raw: [String: Any]) -> WindowEntry? {
@@ -100,8 +114,33 @@ struct WindowCatalogService: WindowCataloging {
             title: title,
             bounds: bounds,
             layer: layer,
+            isMinimized: false,
             appIcon: runningApp?.icon,
             thumbnail: nil
+        )
+    }
+
+    private func minimizedWindows(for processIdentifier: pid_t) -> [WindowEntry] {
+        guard processIdentifier != ProcessInfo.processInfo.processIdentifier else {
+            return []
+        }
+
+        let runningApp = NSRunningApplication(processIdentifier: processIdentifier)
+        let appName = runningApp?.localizedName ?? "Unknown App"
+        let bundleIdentifier = runningApp?.bundleIdentifier
+
+        guard
+            bundleIdentifier != Bundle.main.bundleIdentifier,
+            !ignoredOwners.contains(appName)
+        else {
+            return []
+        }
+
+        return minimizedWindowProvider.minimizedWindows(
+            for: processIdentifier,
+            appName: appName,
+            bundleIdentifier: bundleIdentifier,
+            appIcon: runningApp?.icon
         )
     }
 
@@ -124,6 +163,151 @@ struct WindowCatalogService: WindowCataloging {
         }
 
         return false
+    }
+}
+
+protocol MinimizedWindowProviding {
+    func minimizedWindows(
+        for processIdentifier: pid_t,
+        appName: String,
+        bundleIdentifier: String?,
+        appIcon: NSImage?
+    ) -> [WindowEntry]
+}
+
+struct AccessibilityMinimizedWindowProvider: MinimizedWindowProviding {
+    func minimizedWindows(
+        for processIdentifier: pid_t,
+        appName: String,
+        bundleIdentifier: String?,
+        appIcon: NSImage?
+    ) -> [WindowEntry] {
+        guard AXIsProcessTrusted() else {
+            return []
+        }
+
+        let applicationElement = AXUIElementCreateApplication(processIdentifier)
+        guard let windows = copyWindows(from: applicationElement) else {
+            return []
+        }
+
+        return windows.enumerated().compactMap { index, windowElement in
+            guard copyBoolAttribute(kAXMinimizedAttribute as CFString, from: windowElement) else {
+                return nil
+            }
+
+            let title = copyStringAttribute(kAXTitleAttribute as CFString, from: windowElement) ?? ""
+            let bounds = copyFrame(from: windowElement) ?? .zero
+
+            return WindowEntry(
+                id: syntheticWindowID(
+                    processIdentifier: processIdentifier,
+                    title: title,
+                    bounds: bounds,
+                    index: index
+                ),
+                pid: processIdentifier,
+                appName: appName,
+                bundleIdentifier: bundleIdentifier,
+                title: title,
+                bounds: bounds,
+                layer: 0,
+                isMinimized: true,
+                appIcon: appIcon,
+                thumbnail: nil
+            )
+        }
+    }
+
+    private func copyWindows(from applicationElement: AXUIElement) -> [AXUIElement]? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(applicationElement, kAXWindowsAttribute as CFString, &value)
+        guard result == .success, let array = value as? [AXUIElement] else {
+            return nil
+        }
+        return array
+    }
+
+    private func copyStringAttribute(_ attribute: CFString, from element: AXUIElement) -> String? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success else {
+            return nil
+        }
+
+        return value as? String
+    }
+
+    private func copyBoolAttribute(_ attribute: CFString, from element: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success else {
+            return false
+        }
+
+        return (value as? NSNumber)?.boolValue ?? false
+    }
+
+    private func copyFrame(from element: AXUIElement) -> CGRect? {
+        var positionValue: CFTypeRef?
+        var sizeValue: CFTypeRef?
+
+        guard
+            AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionValue) == .success,
+            AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeValue) == .success,
+            let positionValue,
+            let sizeValue
+        else {
+            return nil
+        }
+
+        // AXUIElementCopyAttributeValue returns AXValue-backed CFTypeRefs for these attributes.
+        // swiftlint:disable:next force_cast
+        let positionAX = positionValue as! AXValue
+        // swiftlint:disable:next force_cast
+        let sizeAX = sizeValue as! AXValue
+
+        var point = CGPoint.zero
+        var size = CGSize.zero
+        guard
+            AXValueGetType(positionAX) == .cgPoint,
+            AXValueGetType(sizeAX) == .cgSize,
+            AXValueGetValue(positionAX, .cgPoint, &point),
+            AXValueGetValue(sizeAX, .cgSize, &size)
+        else {
+            return nil
+        }
+
+        return CGRect(origin: point, size: size)
+    }
+
+    private func syntheticWindowID(
+        processIdentifier: pid_t,
+        title: String,
+        bounds: CGRect,
+        index: Int
+    ) -> CGWindowID {
+        var hash: UInt32 = 2_166_136_261
+
+        func mix(_ byte: UInt8) {
+            hash ^= UInt32(byte)
+            hash = hash &* 16_777_619
+        }
+
+        func mix(_ value: Int64) {
+            let unsigned = UInt64(bitPattern: value)
+            for shift in stride(from: 0, through: 56, by: 8) {
+                mix(UInt8((unsigned >> UInt64(shift)) & 0xFF))
+            }
+        }
+
+        mix(Int64(processIdentifier))
+        mix(Int64(index))
+        mix(Int64(bounds.origin.x.rounded()))
+        mix(Int64(bounds.origin.y.rounded()))
+        mix(Int64(bounds.size.width.rounded()))
+        mix(Int64(bounds.size.height.rounded()))
+        title.utf8.forEach(mix)
+
+        return CGWindowID(0x8000_0000 | (hash & 0x7FFF_FFFF))
     }
 }
 

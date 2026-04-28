@@ -9,6 +9,10 @@ protocol ThumbnailProviding {
 struct ThumbnailService: ThumbnailProviding {
     @MainActor
     func loadThumbnail(for window: WindowEntry) async -> NSImage? {
+        guard !window.isMinimized else {
+            return nil
+        }
+
         guard
             let content = try? await SCShareableContent.current,
             let scWindow = content.windows.first(where: { $0.windowID == window.id })

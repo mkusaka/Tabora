@@ -65,6 +65,10 @@ struct WindowActivationService: WindowActivating {
             return false
         }
 
+        if target.isMinimized || copyBoolAttribute(kAXMinimizedAttribute as CFString, from: bestMatch) {
+            _ = AXUIElementSetAttributeValue(bestMatch, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+        }
+
         _ = AXUIElementPerformAction(bestMatch, kAXRaiseAction as CFString)
         _ = AXUIElementSetAttributeValue(applicationElement, kAXMainWindowAttribute as CFString, bestMatch)
         _ = AXUIElementSetAttributeValue(applicationElement, kAXFocusedWindowAttribute as CFString, bestMatch)
@@ -95,6 +99,10 @@ struct WindowActivationService: WindowActivating {
             total += 4
         }
 
+        if copyBoolAttribute(kAXMinimizedAttribute as CFString, from: windowElement) == target.isMinimized {
+            total += 3
+        }
+
         return total
     }
 
@@ -105,6 +113,15 @@ struct WindowActivationService: WindowActivating {
         }
 
         return value as? String
+    }
+
+    private func copyBoolAttribute(_ attribute: CFString, from element: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success else {
+            return false
+        }
+
+        return (value as? NSNumber)?.boolValue ?? false
     }
 
     private func copyFrame(from element: AXUIElement) -> CGRect? {

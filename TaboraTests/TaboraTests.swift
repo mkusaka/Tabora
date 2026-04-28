@@ -5,6 +5,7 @@
 //  Created by Masatomo Kusaka on 2026/04/12.
 //
 
+import CoreGraphics
 @testable import Tabora
 import Testing
 
@@ -40,9 +41,15 @@ struct TaboraTests {
     }
 
     @Test func windowCatalogFilterKeepsOnlyFrontmostApplicationWindows() {
-        let frontmostWindowA = WindowEntry.makeMock(seed: makeSeed(id: 401, pid: 6001, appName: "iTerm2", title: "Window A"))
-        let backgroundWindow = WindowEntry.makeMock(seed: makeSeed(id: 402, pid: 6002, appName: "Google Chrome", title: "Window A"))
-        let frontmostWindowB = WindowEntry.makeMock(seed: makeSeed(id: 403, pid: 6001, appName: "iTerm2", title: "Window B"))
+        let frontmostWindowA = WindowEntry.makeMock(
+            seed: makeSeed(id: 401, pid: 6001, appName: "iTerm2", title: "Window A")
+        )
+        let backgroundWindow = WindowEntry.makeMock(
+            seed: makeSeed(id: 402, pid: 6002, appName: "Google Chrome", title: "Window A")
+        )
+        let frontmostWindowB = WindowEntry.makeMock(
+            seed: makeSeed(id: 403, pid: 6001, appName: "iTerm2", title: "Window B")
+        )
 
         let filtered = WindowCatalogService.filter(
             [frontmostWindowA, backgroundWindow, frontmostWindowB],
@@ -53,8 +60,12 @@ struct TaboraTests {
     }
 
     @Test func windowCatalogFilterFallsBackToAllWindowsWhenFrontmostHasNoCatalogEntries() {
-        let firstWindow = WindowEntry.makeMock(seed: makeSeed(id: 411, pid: 6011, appName: "iTerm2", title: "Window A"))
-        let secondWindow = WindowEntry.makeMock(seed: makeSeed(id: 412, pid: 6012, appName: "Google Chrome", title: "Window A"))
+        let firstWindow = WindowEntry.makeMock(
+            seed: makeSeed(id: 411, pid: 6011, appName: "iTerm2", title: "Window A")
+        )
+        let secondWindow = WindowEntry.makeMock(
+            seed: makeSeed(id: 412, pid: 6012, appName: "Google Chrome", title: "Window A")
+        )
 
         let filtered = WindowCatalogService.filter(
             [firstWindow, secondWindow],
@@ -62,6 +73,70 @@ struct TaboraTests {
         )
 
         #expect(filtered.map(\.id) == [firstWindow.id, secondWindow.id])
+    }
+
+    @Test func windowCatalogFilterKeepsMinimizedFrontmostApplicationWindows() {
+        let frontmostVisibleWindow = makeWindow(id: 421, pid: 6021, appName: "iTerm2", title: "Window A")
+        let frontmostMinimizedWindow = makeWindow(
+            id: 422,
+            pid: 6021,
+            appName: "iTerm2",
+            title: "Minimized Window",
+            isMinimized: true
+        )
+        let backgroundMinimizedWindow = makeWindow(
+            id: 423,
+            pid: 6022,
+            appName: "Notes",
+            title: "Background Minimized",
+            isMinimized: true
+        )
+
+        let filtered = WindowCatalogService.filter(
+            [frontmostVisibleWindow, frontmostMinimizedWindow, backgroundMinimizedWindow],
+            frontmostApplicationPID: 6021
+        )
+
+        #expect(filtered.map(\.id) == [frontmostVisibleWindow.id, frontmostMinimizedWindow.id])
+        #expect(filtered.last?.isMinimized == true)
+    }
+
+    @Test func windowCatalogMergeAppendsMinimizedWindowsAfterOnScreenWindows() {
+        let onScreenWindow = makeWindow(id: 431, pid: 6031, appName: "Safari", title: "Visible")
+        let minimizedWindow = makeWindow(
+            id: 432,
+            pid: 6031,
+            appName: "Safari",
+            title: "Minimized",
+            isMinimized: true
+        )
+
+        let merged = WindowCatalogService.merge(
+            onScreenEntries: [onScreenWindow],
+            minimizedEntries: [minimizedWindow]
+        )
+
+        #expect(merged.map(\.id) == [onScreenWindow.id, minimizedWindow.id])
+        #expect(merged[1].isMinimized)
+    }
+
+    @Test func windowCatalogMergeKeepsOnScreenEntryWhenIDsOverlap() {
+        let onScreenWindow = makeWindow(id: 441, pid: 6041, appName: "Safari", title: "Visible")
+        let duplicateMinimizedWindow = makeWindow(
+            id: 441,
+            pid: 6041,
+            appName: "Safari",
+            title: "Visible",
+            isMinimized: true
+        )
+
+        let merged = WindowCatalogService.merge(
+            onScreenEntries: [onScreenWindow],
+            minimizedEntries: [duplicateMinimizedWindow]
+        )
+
+        #expect(merged == [onScreenWindow])
+        #expect(merged.first?.isMinimized == false)
     }
 
     private func makeSeed(id: UInt32, pid: Int32, appName: String, title: String) -> UITestWindowSeed {
@@ -77,6 +152,27 @@ struct TaboraTests {
             height: 800,
             layer: 0,
             thumbnailMode: .success
+        )
+    }
+
+    private func makeWindow(
+        id: UInt32,
+        pid: Int32,
+        appName: String,
+        title: String,
+        isMinimized: Bool = false
+    ) -> WindowEntry {
+        WindowEntry(
+            id: CGWindowID(id),
+            pid: pid,
+            appName: appName,
+            bundleIdentifier: nil,
+            title: title,
+            bounds: CGRect(x: 100, y: 100, width: 1200, height: 800),
+            layer: 0,
+            isMinimized: isMinimized,
+            appIcon: nil,
+            thumbnail: nil
         )
     }
 }

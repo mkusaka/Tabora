@@ -68,12 +68,12 @@ struct WindowItemView: View {
                     appIcon
                         .frame(width: 40, height: 40)
 
-                    Text("No Preview")
+                    Text(entry.isMinimized ? "Minimized" : "No Preview")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("No Preview")
+                .accessibilityLabel(entry.isMinimized ? "Minimized" : "No Preview")
                 .accessibilityIdentifier("thumbnail-placeholder-\(entry.id)")
             }
         }

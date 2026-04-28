@@ -92,6 +92,7 @@ extension WindowEntry {
             title: seed.title,
             bounds: seed.bounds,
             layer: seed.layer,
+            isMinimized: false,
             appIcon: icon,
             thumbnail: nil
         )

@@ -9,6 +9,7 @@ struct WindowEntry: Identifiable, Hashable {
     let title: String
     let bounds: CGRect
     let layer: Int
+    let isMinimized: Bool
     let appIcon: NSImage?
     var thumbnail: NSImage?
 
