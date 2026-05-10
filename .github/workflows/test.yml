@@ -12,7 +12,7 @@ concurrency:
 permissions: {}
 
 env:
-  DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+  DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
 
 jobs:
   changes:
@@ -53,10 +53,14 @@ jobs:
               - '.github/workflows/test.yml'
 
   lint:
-    name: Lint
+    name: Lint (${{ matrix.macos }})
     needs: changes
     if: needs.changes.outputs.test == 'true'
-    runs-on: macos-26
+    runs-on: ${{ matrix.macos }}
+    strategy:
+      fail-fast: false
+      matrix:
+        macos: [macos-15, macos-26]
     permissions:
       contents: read
     steps:
@@ -69,11 +73,11 @@ jobs:
           version: 2026.3.9
           cache: true
 
-      - name: Verify Swift 6.3 toolchain
+      - name: Verify Swift 6.2 toolchain
         run: |
           xcodebuild -version
-          swift --version
-          swift --version | grep -q 'Apple Swift version 6\.3'
+          xcrun swift --version
+          xcrun swift --version | grep -q 'Apple Swift version 6\.2\.'
 
       - name: SwiftFormat check
         run: mise exec -- swiftformat --lint .
@@ -82,10 +86,14 @@ jobs:
         run: mise exec -- swiftlint lint --quiet
 
   unit-test:
-    name: Unit Tests
+    name: Unit Tests (${{ matrix.macos }})
     needs: changes
     if: needs.changes.outputs.test == 'true'
-    runs-on: macos-26
+    runs-on: ${{ matrix.macos }}
+    strategy:
+      fail-fast: false
+      matrix:
+        macos: [macos-15, macos-26]
     permissions:
       contents: read
     steps:
@@ -93,11 +101,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Verify Swift 6.3 toolchain
+      - name: Verify Swift 6.2 toolchain
         run: |
           xcodebuild -version
-          swift --version
-          swift --version | grep -q 'Apple Swift version 6\.3'
+          xcrun swift --version
+          xcrun swift --version | grep -q 'Apple Swift version 6\.2\.'
 
       - name: Run unit tests
         run: |
@@ -108,10 +116,14 @@ jobs:
             test
 
   ui-test:
-    name: UI Tests
+    name: UI Tests (${{ matrix.macos }})
     needs: changes
     if: needs.changes.outputs.test == 'true'
-    runs-on: macos-26
+    runs-on: ${{ matrix.macos }}
+    strategy:
+      fail-fast: false
+      matrix:
+        macos: [macos-15, macos-26]
     permissions:
       contents: read
     steps:
@@ -119,11 +131,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Verify Swift 6.3 toolchain
+      - name: Verify Swift 6.2 toolchain
         run: |
           xcodebuild -version
-          swift --version
-          swift --version | grep -q 'Apple Swift version 6\.3'
+          xcrun swift --version
+          xcrun swift --version | grep -q 'Apple Swift version 6\.2\.'
 
       - name: Run UI tests
         run: |

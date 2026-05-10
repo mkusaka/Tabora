@@ -74,7 +74,7 @@ TaboraApp
 
 ## Bootstrap
 
-Open [Tabora.xcodeproj](Tabora.xcodeproj) with Xcode 26.4.1 or newer, build the `Tabora` scheme, and run the app.
+Open [Tabora.xcodeproj](Tabora.xcodeproj) with Xcode 26.3, build the `Tabora` scheme, and run the app.
 
 If you need to recreate the project from scratch in Xcode, the original bootstrap notes are in [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md).
 
