@@ -1,6 +1,7 @@
-import ApplicationServices
+@preconcurrency import ApplicationServices
 import Foundation
 
+@MainActor
 protocol PermissionProviding {
     func currentStatus() -> PermissionStatus
     func primeForUserVisibleFlow()

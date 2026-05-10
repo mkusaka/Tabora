@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 class TaboraUITestCase: XCTestCase {
     let app = XCUIApplication()
     lazy var page = TaboraPage(app: app)

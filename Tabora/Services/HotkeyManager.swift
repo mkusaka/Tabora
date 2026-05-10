@@ -38,7 +38,7 @@ private func taboraHotKeyHandler(
     return noErr
 }
 
-final class HotkeyManager {
+final class HotkeyManager: @unchecked Sendable {
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
     private let onPressed: () -> Void
