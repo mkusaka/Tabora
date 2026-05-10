@@ -19,6 +19,7 @@ enum WindowActivationResult: Equatable {
     }
 }
 
+@MainActor
 protocol WindowActivating {
     func activate(window: WindowEntry) async -> WindowActivationResult
 }

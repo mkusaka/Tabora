@@ -7,6 +7,7 @@ struct UITestWindowSnapshot: Decodable, Equatable {
     let hasThumbnail: Bool
 }
 
+@MainActor
 final class TaboraPage {
     private let backtabCharacter = "\u{19}"
     private let uiTestCommandNotification = Notification.Name("com.mkusaka.Tabora.uitest.command")

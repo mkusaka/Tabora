@@ -23,11 +23,12 @@ jobs:
   release:
     name: Build & Release
     needs: test
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 90
     permissions:
       contents: write
     env:
+      DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
       APP_NAME: Tabora
       RELEASE_ZIP_NAME: Tabora.zip
       CASK_NAME: tabora
@@ -43,6 +44,12 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+
+      - name: Verify Swift 6.3 toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          swift --version | grep -q 'Apple Swift version 6\.3'
 
       - name: Set version
         env:
