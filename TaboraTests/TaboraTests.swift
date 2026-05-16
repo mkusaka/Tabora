@@ -5,6 +5,7 @@
 //  Created by Masatomo Kusaka on 2026/04/12.
 //
 
+import AppKit
 import CoreGraphics
 @testable import Tabora
 import Testing
@@ -139,6 +140,23 @@ struct TaboraTests {
         #expect(merged.first?.isMinimized == false)
     }
 
+    @MainActor
+    @Test func windowActivationRequestsCooperativeActivationFromOverlayApp() async {
+        let application = RecordingRunningApplication(processIdentifier: 6051)
+        let service = WindowActivationService(
+            permissionService: UITestPermissionService(screenCapture: .granted, accessibility: .missing),
+            applicationResolver: StubRunningApplicationResolver(application: application)
+        )
+
+        let result = await service.activate(
+            window: makeWindow(id: 451, pid: 6051, appName: "Safari", title: "Selected Window")
+        )
+
+        #expect(result == .appOnly(title: "Selected Window"))
+        #expect(application.directActivationOptions.isEmpty)
+        #expect(application.currentApplicationActivationOptions == [.activateAllWindows])
+    }
+
     private func makeSeed(id: UInt32, pid: Int32, appName: String, title: String) -> UITestWindowSeed {
         UITestWindowSeed(
             id: id,
@@ -174,5 +192,36 @@ struct TaboraTests {
             appIcon: nil,
             thumbnail: nil
         )
+    }
+}
+
+@MainActor
+private struct StubRunningApplicationResolver: RunningApplicationResolving {
+    let application: (any RunningApplicationActivating)?
+
+    func runningApplication(processIdentifier _: pid_t) -> (any RunningApplicationActivating)? {
+        application
+    }
+}
+
+@MainActor
+private final class RecordingRunningApplication: RunningApplicationActivating {
+    let processIdentifier: pid_t
+    var directActivationOptions: [NSApplication.ActivationOptions] = []
+    var currentApplicationActivationOptions: [NSApplication.ActivationOptions] = []
+    var activationResult = true
+
+    init(processIdentifier: pid_t) {
+        self.processIdentifier = processIdentifier
+    }
+
+    func activate(options: NSApplication.ActivationOptions) -> Bool {
+        directActivationOptions.append(options)
+        return activationResult
+    }
+
+    func activateFromCurrentApplication(options: NSApplication.ActivationOptions) -> Bool {
+        currentApplicationActivationOptions.append(options)
+        return activationResult
     }
 }
