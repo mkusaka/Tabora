@@ -27,6 +27,7 @@ protocol WindowActivating {
 @MainActor
 protocol RunningApplicationActivating {
     var processIdentifier: pid_t { get }
+    var bundleURL: URL? { get }
 
     func activate(options: NSApplication.ActivationOptions) -> Bool
     func activateFromCurrentApplication(options: NSApplication.ActivationOptions) -> Bool
@@ -44,22 +45,50 @@ protocol RunningApplicationResolving {
     func runningApplication(processIdentifier: pid_t) -> (any RunningApplicationActivating)?
 }
 
+@MainActor
+protocol ApplicationOpening {
+    func openApplication(at bundleURL: URL) async -> Bool
+}
+
 struct WorkspaceRunningApplicationResolver: RunningApplicationResolving {
     func runningApplication(processIdentifier: pid_t) -> (any RunningApplicationActivating)? {
         NSRunningApplication(processIdentifier: processIdentifier)
     }
 }
 
+struct WorkspaceApplicationOpener: ApplicationOpening {
+    func openApplication(at bundleURL: URL) async -> Bool {
+        await withCheckedContinuation { continuation in
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+
+            NSWorkspace.shared.openApplication(at: bundleURL, configuration: configuration) { application, error in
+                if let error {
+                    TaboraLogger.log(
+                        "activation",
+                        "NSWorkspace.openApplication failed for \(bundleURL.path): \(error.localizedDescription)"
+                    )
+                }
+
+                continuation.resume(returning: application != nil && error == nil)
+            }
+        }
+    }
+}
+
 struct WindowActivationService: WindowActivating {
     let permissionService: PermissionProviding
     private let applicationResolver: any RunningApplicationResolving
+    private let applicationOpener: any ApplicationOpening
 
     init(
         permissionService: any PermissionProviding,
-        applicationResolver: any RunningApplicationResolving = WorkspaceRunningApplicationResolver()
+        applicationResolver: any RunningApplicationResolving = WorkspaceRunningApplicationResolver(),
+        applicationOpener: any ApplicationOpening = WorkspaceApplicationOpener()
     ) {
         self.permissionService = permissionService
         self.applicationResolver = applicationResolver
+        self.applicationOpener = applicationOpener
     }
 
     func activate(window: WindowEntry) async -> WindowActivationResult {
@@ -68,7 +97,7 @@ struct WindowActivationService: WindowActivating {
             return .failure(title: window.displayTitle)
         }
 
-        let appActivated = app.activateFromCurrentApplication(options: [.activateAllWindows])
+        let appActivated = await activateApplication(app)
         guard appActivated else {
             TaboraLogger.log("activation", "App activation failed for pid=\(window.pid) title=\(window.displayTitle)")
             return .failure(title: window.displayTitle)
@@ -87,6 +116,30 @@ struct WindowActivationService: WindowActivating {
                 : "Fell back to app activation for \(window.displayTitle)"
         )
         return raised ? .success(title: window.displayTitle) : .appOnly(title: window.displayTitle)
+    }
+
+    private func activateApplication(_ app: any RunningApplicationActivating) async -> Bool {
+        if let bundleURL = app.bundleURL {
+            let opened = await applicationOpener.openApplication(at: bundleURL)
+            TaboraLogger.log(
+                "activation",
+                """
+                NSWorkspace.openApplication result=\(opened) \
+                bundleURL=\(bundleURL.path) targetPID=\(app.processIdentifier)
+                """
+            )
+
+            if opened {
+                return true
+            }
+        }
+
+        let activated = app.activateFromCurrentApplication(options: [.activateAllWindows])
+        TaboraLogger.log(
+            "activation",
+            "NSRunningApplication fallback result=\(activated) targetPID=\(app.processIdentifier)"
+        )
+        return activated
     }
 
     private func raiseBestMatchingWindow(for target: WindowEntry) -> Bool {

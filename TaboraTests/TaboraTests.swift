@@ -184,6 +184,54 @@ struct TaboraTests {
         #expect(application.currentApplicationActivationOptions == [.activateAllWindows])
     }
 
+    @MainActor
+    @Test func windowActivationOpensApplicationBundleBeforeRunningApplicationFallback() async {
+        let bundleURL = URL(fileURLWithPath: "/Applications/Safari.app")
+        let application = RecordingRunningApplication(
+            processIdentifier: 6052,
+            bundleURL: bundleURL
+        )
+        let opener = RecordingApplicationOpener(result: true)
+        let service = WindowActivationService(
+            permissionService: UITestPermissionService(screenCapture: .granted, accessibility: .missing),
+            applicationResolver: StubRunningApplicationResolver(application: application),
+            applicationOpener: opener
+        )
+
+        let result = await service.activate(
+            window: makeWindow(id: 452, pid: 6052, appName: "Safari", title: "Selected Window")
+        )
+
+        #expect(result == .appOnly(title: "Selected Window"))
+        #expect(opener.openedBundleURLs == [bundleURL])
+        #expect(application.directActivationOptions.isEmpty)
+        #expect(application.currentApplicationActivationOptions.isEmpty)
+    }
+
+    @MainActor
+    @Test func windowActivationFallsBackToRunningApplicationWhenBundleOpenFails() async {
+        let bundleURL = URL(fileURLWithPath: "/Applications/Safari.app")
+        let application = RecordingRunningApplication(
+            processIdentifier: 6053,
+            bundleURL: bundleURL
+        )
+        let opener = RecordingApplicationOpener(result: false)
+        let service = WindowActivationService(
+            permissionService: UITestPermissionService(screenCapture: .granted, accessibility: .missing),
+            applicationResolver: StubRunningApplicationResolver(application: application),
+            applicationOpener: opener
+        )
+
+        let result = await service.activate(
+            window: makeWindow(id: 453, pid: 6053, appName: "Safari", title: "Selected Window")
+        )
+
+        #expect(result == .appOnly(title: "Selected Window"))
+        #expect(opener.openedBundleURLs == [bundleURL])
+        #expect(application.directActivationOptions.isEmpty)
+        #expect(application.currentApplicationActivationOptions == [.activateAllWindows])
+    }
+
     private func makeSeed(id: UInt32, pid: Int32, appName: String, title: String) -> UITestWindowSeed {
         UITestWindowSeed(
             id: id,
@@ -258,12 +306,14 @@ private struct StubRunningApplicationResolver: RunningApplicationResolving {
 @MainActor
 private final class RecordingRunningApplication: RunningApplicationActivating {
     let processIdentifier: pid_t
+    let bundleURL: URL?
     var directActivationOptions: [NSApplication.ActivationOptions] = []
     var currentApplicationActivationOptions: [NSApplication.ActivationOptions] = []
     var activationResult = true
 
-    init(processIdentifier: pid_t) {
+    init(processIdentifier: pid_t, bundleURL: URL? = nil) {
         self.processIdentifier = processIdentifier
+        self.bundleURL = bundleURL
     }
 
     func activate(options: NSApplication.ActivationOptions) -> Bool {
@@ -274,5 +324,20 @@ private final class RecordingRunningApplication: RunningApplicationActivating {
     func activateFromCurrentApplication(options: NSApplication.ActivationOptions) -> Bool {
         currentApplicationActivationOptions.append(options)
         return activationResult
+    }
+}
+
+@MainActor
+private final class RecordingApplicationOpener: ApplicationOpening {
+    let result: Bool
+    private(set) var openedBundleURLs: [URL] = []
+
+    init(result: Bool) {
+        self.result = result
+    }
+
+    func openApplication(at bundleURL: URL) async -> Bool {
+        openedBundleURLs.append(bundleURL)
+        return result
     }
 }
