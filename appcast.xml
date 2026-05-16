@@ -69,5 +69,13 @@
         <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
         <enclosure url="https://github.com/mkusaka/Tabora/releases/download/v0.0.8/Tabora.zip" sparkle:edSignature="2gZbHp1qEEkj0AUcsKj4hiAWsecP33b0/34JdupCLr6DGPlXcXhLHWUfbTelCH9pEwT7LPB+j3pruXm69d/oCg==" length="1915030" type="application/octet-stream"/>
     </item>
+    <item>
+        <title>Version 0.0.9</title>
+        <pubDate>Sat, 16 May 2026 20:02:54 +0000</pubDate>
+        <sparkle:version>9</sparkle:version>
+        <sparkle:shortVersionString>0.0.9</sparkle:shortVersionString>
+        <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+        <enclosure url="https://github.com/mkusaka/Tabora/releases/download/v0.0.9/Tabora.zip" sparkle:edSignature="v/qIqflUNM1oc9nGARZfJ8U8EyA0mrqGykTE72JCb/yoiRMbfwCz1RU2qTdj58069ULwwRv9AVVZPdJIZ69eCQ==" length="1928988" type="application/octet-stream"/>
+    </item>
   </channel>
 </rss>
