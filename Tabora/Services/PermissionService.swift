@@ -7,13 +7,34 @@ protocol PermissionProviding {
     func primeForUserVisibleFlow()
 }
 
+@MainActor
+protocol SystemPermissionChecking {
+    func isScreenCaptureGranted() -> Bool
+    func isAccessibilityGranted(prompt: Bool) -> Bool
+}
+
+struct LiveSystemPermissionChecker: SystemPermissionChecking {
+    func isScreenCaptureGranted() -> Bool {
+        CGPreflightScreenCaptureAccess()
+    }
+
+    func isAccessibilityGranted(prompt: Bool) -> Bool {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: prompt] as CFDictionary
+        return AXIsProcessTrustedWithOptions(options)
+    }
+}
+
 final class PermissionService: PermissionProviding {
     private var hasPromptedAccessibility = false
+    private let systemPermissionChecker: any SystemPermissionChecking
+
+    init(systemPermissionChecker: any SystemPermissionChecking = LiveSystemPermissionChecker()) {
+        self.systemPermissionChecker = systemPermissionChecker
+    }
 
     func currentStatus() -> PermissionStatus {
-        let accessibilityOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
-        let screenCaptureGranted = CGPreflightScreenCaptureAccess()
-        let accessibilityGranted = AXIsProcessTrustedWithOptions(accessibilityOptions)
+        let screenCaptureGranted = systemPermissionChecker.isScreenCaptureGranted()
+        let accessibilityGranted = systemPermissionChecker.isAccessibilityGranted(prompt: false)
 
         let status = PermissionStatus(
             screenCapture: screenCaptureGranted ? .granted : .missing,
@@ -29,10 +50,14 @@ final class PermissionService: PermissionProviding {
             return
         }
 
+        guard !systemPermissionChecker.isAccessibilityGranted(prompt: false) else {
+            TaboraLogger.log("permission", "Accessibility already granted, skipping prompt")
+            return
+        }
+
         hasPromptedAccessibility = true
-        let promptOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         TaboraLogger.log("permission", "Priming accessibility prompt")
-        _ = AXIsProcessTrustedWithOptions(promptOptions)
+        _ = systemPermissionChecker.isAccessibilityGranted(prompt: true)
     }
 }
 
