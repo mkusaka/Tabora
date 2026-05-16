@@ -45,8 +45,7 @@ protocol RunningApplicationResolving {
     func runningApplication(processIdentifier: pid_t) -> (any RunningApplicationActivating)?
 }
 
-@MainActor
-protocol ApplicationOpening {
+protocol ApplicationOpening: Sendable {
     func openApplication(at bundleURL: URL) async -> Bool
 }
 

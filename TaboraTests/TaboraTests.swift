@@ -203,7 +203,7 @@ struct TaboraTests {
         )
 
         #expect(result == .appOnly(title: "Selected Window"))
-        #expect(opener.openedBundleURLs == [bundleURL])
+        #expect(await opener.openedBundleURLsSnapshot() == [bundleURL])
         #expect(application.directActivationOptions.isEmpty)
         #expect(application.currentApplicationActivationOptions.isEmpty)
     }
@@ -227,7 +227,7 @@ struct TaboraTests {
         )
 
         #expect(result == .appOnly(title: "Selected Window"))
-        #expect(opener.openedBundleURLs == [bundleURL])
+        #expect(await opener.openedBundleURLsSnapshot() == [bundleURL])
         #expect(application.directActivationOptions.isEmpty)
         #expect(application.currentApplicationActivationOptions == [.activateAllWindows])
     }
@@ -327,8 +327,7 @@ private final class RecordingRunningApplication: RunningApplicationActivating {
     }
 }
 
-@MainActor
-private final class RecordingApplicationOpener: ApplicationOpening {
+private actor RecordingApplicationOpener: ApplicationOpening {
     let result: Bool
     private(set) var openedBundleURLs: [URL] = []
 
@@ -339,5 +338,9 @@ private final class RecordingApplicationOpener: ApplicationOpening {
     func openApplication(at bundleURL: URL) async -> Bool {
         openedBundleURLs.append(bundleURL)
         return result
+    }
+
+    func openedBundleURLsSnapshot() -> [URL] {
+        openedBundleURLs
     }
 }
