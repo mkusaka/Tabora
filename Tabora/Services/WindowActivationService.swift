@@ -2,6 +2,12 @@ import AppKit
 import ApplicationServices
 import CoreGraphics
 
+@_silgen_name("_AXUIElementGetWindow")
+private func axUIElementGetWindowCompat(
+    _ element: AXUIElement,
+    _ windowID: UnsafeMutablePointer<CGWindowID>
+) -> AXError
+
 enum WindowActivationResult: Equatable {
     case success(title: String)
     case appOnly(title: String)
@@ -27,6 +33,7 @@ protocol WindowActivating {
 @MainActor
 protocol RunningApplicationActivating {
     var processIdentifier: pid_t { get }
+    var bundleURL: URL? { get }
 
     func activate(options: NSApplication.ActivationOptions) -> Bool
     func activateFromCurrentApplication(options: NSApplication.ActivationOptions) -> Bool
@@ -44,22 +51,52 @@ protocol RunningApplicationResolving {
     func runningApplication(processIdentifier: pid_t) -> (any RunningApplicationActivating)?
 }
 
+protocol ApplicationOpening: Sendable {
+    func openApplication(at bundleURL: URL) async -> Bool
+}
+
 struct WorkspaceRunningApplicationResolver: RunningApplicationResolving {
     func runningApplication(processIdentifier: pid_t) -> (any RunningApplicationActivating)? {
         NSRunningApplication(processIdentifier: processIdentifier)
     }
 }
 
+struct WorkspaceApplicationOpener: ApplicationOpening {
+    func openApplication(at bundleURL: URL) async -> Bool {
+        await withCheckedContinuation { continuation in
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+
+            NSWorkspace.shared.openApplication(at: bundleURL, configuration: configuration) { application, error in
+                if let error {
+                    TaboraLogger.log(
+                        "activation",
+                        "NSWorkspace.openApplication failed for \(bundleURL.path): \(error.localizedDescription)"
+                    )
+                }
+
+                continuation.resume(returning: application != nil && error == nil)
+            }
+        }
+    }
+}
+
 struct WindowActivationService: WindowActivating {
     let permissionService: PermissionProviding
     private let applicationResolver: any RunningApplicationResolving
+    private let applicationOpener: any ApplicationOpening
+    private let windowServerFocuser: any WindowServerFocusing
 
     init(
         permissionService: any PermissionProviding,
-        applicationResolver: any RunningApplicationResolving = WorkspaceRunningApplicationResolver()
+        applicationResolver: any RunningApplicationResolving = WorkspaceRunningApplicationResolver(),
+        applicationOpener: any ApplicationOpening = WorkspaceApplicationOpener(),
+        windowServerFocuser: any WindowServerFocusing = SkyLightWindowServerFocuser()
     ) {
         self.permissionService = permissionService
         self.applicationResolver = applicationResolver
+        self.applicationOpener = applicationOpener
+        self.windowServerFocuser = windowServerFocuser
     }
 
     func activate(window: WindowEntry) async -> WindowActivationResult {
@@ -68,47 +105,92 @@ struct WindowActivationService: WindowActivating {
             return .failure(title: window.displayTitle)
         }
 
-        let appActivated = app.activateFromCurrentApplication(options: [.activateAllWindows])
+        let hasAccessibility = permissionService.currentStatus().accessibility == .granted
+        if hasAccessibility {
+            let raised = raiseBestMatchingWindow(for: window)
+            TaboraLogger.log(
+                "activation",
+                raised
+                    ? "Raised exact window for \(window.displayTitle)"
+                    : "Fell back to app activation for \(window.displayTitle)"
+            )
+            if raised {
+                return .success(title: window.displayTitle)
+            }
+        } else {
+            TaboraLogger.log("activation", "Accessibility missing, using app fallback for \(window.displayTitle)")
+        }
+
+        let appActivated = await activateApplication(app)
         guard appActivated else {
             TaboraLogger.log("activation", "App activation failed for pid=\(window.pid) title=\(window.displayTitle)")
             return .failure(title: window.displayTitle)
         }
 
-        guard permissionService.currentStatus().accessibility == .granted else {
-            TaboraLogger.log("activation", "Accessibility missing, using app fallback for \(window.displayTitle)")
-            return .appOnly(title: window.displayTitle)
+        if hasAccessibility, raiseBestMatchingWindow(for: window) {
+            TaboraLogger.log("activation", "Raised exact window after app activation for \(window.displayTitle)")
+            return .success(title: window.displayTitle)
         }
 
-        let raised = raiseBestMatchingWindow(for: window)
+        return .appOnly(title: window.displayTitle)
+    }
+
+    private func activateApplication(_ app: any RunningApplicationActivating) async -> Bool {
+        if let bundleURL = app.bundleURL {
+            let opened = await applicationOpener.openApplication(at: bundleURL)
+            TaboraLogger.log(
+                "activation",
+                """
+                NSWorkspace.openApplication result=\(opened) \
+                bundleURL=\(bundleURL.path) targetPID=\(app.processIdentifier)
+                """
+            )
+
+            if opened {
+                return true
+            }
+        }
+
+        let activated = app.activateFromCurrentApplication(options: [.activateAllWindows])
         TaboraLogger.log(
             "activation",
-            raised
-                ? "Raised exact window for \(window.displayTitle)"
-                : "Fell back to app activation for \(window.displayTitle)"
+            "NSRunningApplication fallback result=\(activated) targetPID=\(app.processIdentifier)"
         )
-        return raised ? .success(title: window.displayTitle) : .appOnly(title: window.displayTitle)
+        return activated
     }
 
     private func raiseBestMatchingWindow(for target: WindowEntry) -> Bool {
+        let windowServerFocused = focusWindowThroughWindowServer(target)
         let applicationElement = AXUIElementCreateApplication(target.pid)
         guard let windows = copyWindows(from: applicationElement), !windows.isEmpty else {
-            return false
+            return windowServerFocused
         }
 
         guard
             let bestMatch = windows.max(by: { score($0, against: target) < score($1, against: target) })
         else {
-            return false
+            return windowServerFocused
         }
 
         if target.isMinimized || copyBoolAttribute(kAXMinimizedAttribute as CFString, from: bestMatch) {
             _ = AXUIElementSetAttributeValue(bestMatch, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
         }
 
-        _ = AXUIElementPerformAction(bestMatch, kAXRaiseAction as CFString)
+        let raiseResult = AXUIElementPerformAction(bestMatch, kAXRaiseAction as CFString)
         _ = AXUIElementSetAttributeValue(applicationElement, kAXMainWindowAttribute as CFString, bestMatch)
         _ = AXUIElementSetAttributeValue(applicationElement, kAXFocusedWindowAttribute as CFString, bestMatch)
-        return true
+        return windowServerFocused || raiseResult == .success
+    }
+
+    private func focusWindowThroughWindowServer(_ target: WindowEntry) -> Bool {
+        guard !target.isMinimized else {
+            return false
+        }
+
+        return windowServerFocuser.focusWindow(
+            processIdentifier: target.pid,
+            windowID: target.id
+        )
     }
 
     private func copyWindows(from applicationElement: AXUIElement) -> [AXUIElement]? {
@@ -122,6 +204,10 @@ struct WindowActivationService: WindowActivating {
 
     private func score(_ windowElement: AXUIElement, against target: WindowEntry) -> Int {
         var total = 0
+
+        if copyWindowID(from: windowElement) == target.id {
+            total += 100
+        }
 
         if let title = copyStringAttribute(kAXTitleAttribute as CFString, from: windowElement) {
             if title == target.title {
@@ -140,6 +226,15 @@ struct WindowActivationService: WindowActivating {
         }
 
         return total
+    }
+
+    private func copyWindowID(from element: AXUIElement) -> CGWindowID? {
+        var windowID = CGWindowID(0)
+        guard axUIElementGetWindowCompat(element, &windowID) == .success, windowID != 0 else {
+            return nil
+        }
+
+        return windowID
     }
 
     private func copyStringAttribute(_ attribute: CFString, from element: AXUIElement) -> String? {

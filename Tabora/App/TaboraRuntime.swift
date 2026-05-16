@@ -12,6 +12,7 @@ struct TaboraConfiguration {
     let permissionFilePath: String?
     let commandFilePath: String?
     let seededWindows: [UITestWindowSeed]
+    let usesLiveActivation: Bool
     let activationMode: UITestWindowActivationService.Mode
 
     init(processInfo: ProcessInfo = .processInfo) {
@@ -28,6 +29,7 @@ struct TaboraConfiguration {
         permissionFilePath = environment["UITEST_PERMISSION_FILE"]
         commandFilePath = environment[UITestCommandBridge.commandFileEnvironmentKey]
         seededWindows = UITestWindowSeed.decodeEnvironmentJSON(environment["UITEST_WINDOWS_JSON"])
+        usesLiveActivation = environment["UITEST_ACTIVATION_MODE"] == "live"
         activationMode =
             UITestWindowActivationService.Mode(rawValue: environment["UITEST_ACTIVATION_MODE"] ?? "")
                 ?? .success
@@ -151,17 +153,21 @@ final class TaboraRuntime {
             let recorder = UITestActivationRecorder(
                 summaryFileURL: configuration.resultFilePath.map(URL.init(fileURLWithPath:))
             )
-            return RuntimeServices(
-                permissionService: UITestPermissionService(
-                    screenCapture: configuration.screenCaptureOverride ?? .granted,
-                    accessibility: configuration.accessibilityOverride ?? .granted
-                ),
-                windowCatalog: UITestWindowCatalogService(seeds: configuration.seededWindows),
-                thumbnailService: UITestThumbnailService(seeds: configuration.seededWindows),
-                activationService: UITestWindowActivationService(
+            let permissionService = UITestPermissionService(
+                screenCapture: configuration.screenCaptureOverride ?? .granted,
+                accessibility: configuration.accessibilityOverride ?? .granted
+            )
+            let activationService: any WindowActivating = configuration.usesLiveActivation
+                ? WindowActivationService(permissionService: permissionService)
+                : UITestWindowActivationService(
                     mode: configuration.activationMode,
                     recorder: recorder
-                ),
+                )
+            return RuntimeServices(
+                permissionService: permissionService,
+                windowCatalog: UITestWindowCatalogService(seeds: configuration.seededWindows),
+                thumbnailService: UITestThumbnailService(seeds: configuration.seededWindows),
+                activationService: activationService,
                 activationRecorder: recorder
             )
         }
