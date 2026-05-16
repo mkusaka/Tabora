@@ -23,6 +23,33 @@ struct TaboraTests {
         #expect(status.logSummary == "screenCapture=missing accessibility=granted")
     }
 
+    @MainActor
+    @Test func permissionServiceDoesNotPromptWhenAccessibilityIsAlreadyGranted() {
+        let checker = RecordingSystemPermissionChecker(
+            screenCaptureGranted: true,
+            accessibilityGranted: true
+        )
+        let service = PermissionService(systemPermissionChecker: checker)
+
+        service.primeForUserVisibleFlow()
+
+        #expect(checker.accessibilityPromptRequests == [false])
+    }
+
+    @MainActor
+    @Test func permissionServicePromptsOnceWhenAccessibilityIsMissing() {
+        let checker = RecordingSystemPermissionChecker(
+            screenCaptureGranted: true,
+            accessibilityGranted: false
+        )
+        let service = PermissionService(systemPermissionChecker: checker)
+
+        service.primeForUserVisibleFlow()
+        service.primeForUserVisibleFlow()
+
+        #expect(checker.accessibilityPromptRequests == [false, true])
+    }
+
     @Test func loginItemStatusExposesMenuMetadata() {
         #expect(LoginItemStatus.enabled.menuDescription == "Enabled")
         #expect(LoginItemStatus.enabled.menuState == .on)
@@ -192,6 +219,30 @@ struct TaboraTests {
             appIcon: nil,
             thumbnail: nil
         )
+    }
+}
+
+@MainActor
+private final class RecordingSystemPermissionChecker: SystemPermissionChecking {
+    let screenCaptureGranted: Bool
+    let accessibilityGranted: Bool
+    private(set) var accessibilityPromptRequests: [Bool] = []
+
+    init(
+        screenCaptureGranted: Bool,
+        accessibilityGranted: Bool
+    ) {
+        self.screenCaptureGranted = screenCaptureGranted
+        self.accessibilityGranted = accessibilityGranted
+    }
+
+    func isScreenCaptureGranted() -> Bool {
+        screenCaptureGranted
+    }
+
+    func isAccessibilityGranted(prompt: Bool) -> Bool {
+        accessibilityPromptRequests.append(prompt)
+        return accessibilityGranted
     }
 }
 
