@@ -9,7 +9,7 @@ class TaboraUITestCase: XCTestCase {
         continueAfterFailure = false
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         if app.state != .notRunning {
             app.terminate()
         }

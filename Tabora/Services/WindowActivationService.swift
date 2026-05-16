@@ -24,16 +24,51 @@ protocol WindowActivating {
     func activate(window: WindowEntry) async -> WindowActivationResult
 }
 
+@MainActor
+protocol RunningApplicationActivating {
+    var processIdentifier: pid_t { get }
+
+    func activate(options: NSApplication.ActivationOptions) -> Bool
+    func activateFromCurrentApplication(options: NSApplication.ActivationOptions) -> Bool
+}
+
+extension NSRunningApplication: RunningApplicationActivating {
+    func activateFromCurrentApplication(options: NSApplication.ActivationOptions) -> Bool {
+        NSApp.yieldActivation(to: self)
+        return activate(from: .current, options: options)
+    }
+}
+
+@MainActor
+protocol RunningApplicationResolving {
+    func runningApplication(processIdentifier: pid_t) -> (any RunningApplicationActivating)?
+}
+
+struct WorkspaceRunningApplicationResolver: RunningApplicationResolving {
+    func runningApplication(processIdentifier: pid_t) -> (any RunningApplicationActivating)? {
+        NSRunningApplication(processIdentifier: processIdentifier)
+    }
+}
+
 struct WindowActivationService: WindowActivating {
     let permissionService: PermissionProviding
+    private let applicationResolver: any RunningApplicationResolving
+
+    init(
+        permissionService: any PermissionProviding,
+        applicationResolver: any RunningApplicationResolving = WorkspaceRunningApplicationResolver()
+    ) {
+        self.permissionService = permissionService
+        self.applicationResolver = applicationResolver
+    }
 
     func activate(window: WindowEntry) async -> WindowActivationResult {
-        guard let app = NSRunningApplication(processIdentifier: window.pid) else {
+        guard let app = applicationResolver.runningApplication(processIdentifier: window.pid) else {
             TaboraLogger.log("activation", "No running app for pid=\(window.pid) title=\(window.displayTitle)")
             return .failure(title: window.displayTitle)
         }
 
-        let appActivated = app.activate(options: [.activateAllWindows])
+        let appActivated = app.activateFromCurrentApplication(options: [.activateAllWindows])
         guard appActivated else {
             TaboraLogger.log("activation", "App activation failed for pid=\(window.pid) title=\(window.displayTitle)")
             return .failure(title: window.displayTitle)
